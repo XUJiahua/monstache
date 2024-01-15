@@ -4730,7 +4730,7 @@ func (ic *indexClient) buildTimestampGen() gtm.TimestampGenerator {
 			}
 
 			ts := <-ic.oplogTsResolver.GetResumeTimestamp(candidateTs, tsSource)
-			infoLog.Printf("Resuming from timestamp %+v", ts)
+			infoLog.Printf("Resuming from timestamp %+v, from source %s", ts, tsSource)
 			return ts, nil
 		}
 	}
