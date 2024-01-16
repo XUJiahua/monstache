@@ -1,6 +1,6 @@
 EnableTemplate = false
 EnvDelimiter = ""
-mongo-url = ""
+mongo-url = "mongodb://10.30.11.112:27017,10.30.11.112:27018,10.30.11.112:27019"
 mongo-config-url = ""
 mongo-oplog-database-name = ""
 mongo-oplog-collection-name = ""
@@ -86,12 +86,9 @@ relate-buffer = 0
 post-processors = 0
 prune-invalid-json = false
 Debug = false
-
-[gtm-settings]
-  channel-size = 0
-  buffer-size = 0
-  buffer-duration = ""
-  max-await-time = ""
+virtual-delete-field-name = "is_deleted"
+kafka-brokers = "10.30.11.112:9092"
+kafka-topic-prefix = "monstache."
 
 [aws-connect]
   Strategy = 0

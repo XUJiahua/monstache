@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
+	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
 	"io/ioutil"
 	"log"
 	"math"
@@ -449,6 +450,8 @@ type configOptions struct {
 	FileSink                    bool
 	KafkaSink                   bool
 	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
+	KafkaBrokers                string `toml:"kafka-brokers"`
+	KafkaTopicPrefix            string `toml:"kafka-topic-prefix"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -2465,6 +2468,8 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		}
 
 		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
+		config.KafkaBrokers = tomlConfig.KafkaBrokers
+		config.KafkaTopicPrefix = tomlConfig.KafkaTopicPrefix
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
@@ -5386,6 +5391,13 @@ func buildSinkConnector(config *configOptions) SinkConnector {
 		return &file.Sink{
 			VirtualDeleteFieldName: config.VirtualDeleteFieldName,
 		}
+	}
+	if config.KafkaSink {
+		sink, err := kafka.New(config.KafkaBrokers, config.VirtualDeleteFieldName, config.KafkaTopicPrefix)
+		if err != nil {
+			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+		}
+		return sink
 	}
 
 	return nil
