@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
+	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"io/ioutil"
 	"log"
 	"math"
@@ -445,6 +446,9 @@ type configOptions struct {
 	Debug                       bool
 	mongoClientOptions          *options.ClientOptions
 	ConsoleSink                 bool
+	FileSink                    bool
+	KafkaSink                   bool
+	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -1874,6 +1878,8 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	flag.StringVar(&config.OplogDateFieldFormat, "oplog-date-field-format", "", "Format to use for the oplog date")
 	flag.BoolVar(&config.Debug, "debug", false, "True to enable verbose debug information")
 	flag.BoolVar(&config.ConsoleSink, "console", false, "True to enable console print op log")
+	flag.BoolVar(&config.FileSink, "file", false, "True to enable file sink")
+	flag.BoolVar(&config.KafkaSink, "kafka", false, "True to enable kafka sink")
 	flag.Parse()
 	return config
 }
@@ -2457,6 +2463,8 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		if !config.ElasticPKIAuth.enabled() {
 			config.ElasticPKIAuth = tomlConfig.ElasticPKIAuth
 		}
+
+		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
@@ -3504,6 +3512,9 @@ func (ic *indexClient) routeOp(op *gtm.Op) (err error) {
 	if op.IsDrop() {
 		err = ic.sinkConnector.RouteDrop(op)
 	} else if op.IsDelete() {
+		// op.Data will be used further
+		op.Data = make(map[string]interface{})
+		op.Data["_id"] = op.Id
 		err = ic.sinkConnector.RouteDelete(op)
 	} else if op.Data != nil {
 		// do not directly use RouteData, as we do not prepare full document yet
@@ -5370,6 +5381,11 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 func buildSinkConnector(config *configOptions) SinkConnector {
 	if config.ConsoleSink {
 		return &console.Sink{}
+	}
+	if config.FileSink {
+		return &file.Sink{
+			VirtualDeleteFieldName: config.VirtualDeleteFieldName,
+		}
 	}
 
 	return nil
