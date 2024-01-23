@@ -1,13 +1,15 @@
-FROM --platform=$BUILDPLATFORM golang:1.20.4-alpine3.17 AS build
-WORKDIR /src
-ARG TARGETOS TARGETARCH
-RUN --mount=target=. \
-    --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
-	go mod download; \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/monstache .
+FROM golang:1.18
+WORKDIR /app
+COPY ./ ./
+RUN go env -w GO111MODULE=on
+RUN go env -w GOPROXY=https://goproxy.cn,direct
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o monstache
 
-FROM alpine:3.17
-RUN apk --no-cache add ca-certificates
-ENTRYPOINT ["/bin/monstache"]
-COPY --from=build /out/monstache /bin
+FROM debian:bullseye-slim AS runtime
+RUN apt-get update
+# may have issue
+RUN apt-get install ca-certificates -y
+RUN update-ca-certificates
+WORKDIR /app
+COPY --from=0 /app/monstache ./
+ENTRYPOINT ["./monstache"]
