@@ -1,11 +1,40 @@
-FROM golang:1.20
+####################################################################################################
+# Step 1: Build the app
+####################################################################################################
+
+FROM rwynn/monstache-builder-cache-rel6:1.0.8 AS build-app
+
+RUN mkdir /app
+
 WORKDIR /app
-COPY ./ ./
+
+COPY . .
+
 RUN go env -w GO111MODULE=on
 RUN go env -w GOPROXY=https://goproxy.cn,direct
-RUN GOOS=linux GOARCH=amd64 go build -o monstache
+RUN go mod download
+
+RUN make release
+
+####################################################################################################
+# Step 2: Copy output build file to an alpine image
+####################################################################################################
 
 FROM rwynn/monstache-alpine:3.17.3 AS final
-WORKDIR /app
-COPY --from=0 /app/monstache ./
-ENTRYPOINT ["./monstache"]
+
+#ARG BUILD_DATE
+#
+#ARG VCS_REF
+#
+#ARG VSC_URL
+#
+#ARG BUILD_VERSION
+#
+#LABEL org.label-schema.build-date=$BUILD_DATE \
+#      org.label-schema.vcs-url=$VSC_URL \
+#      org.label-schema.vcs-ref=$VCS_REF \
+#      org.label-schema.schema-version=$BUILD_VERSION
+
+ENTRYPOINT ["/bin/monstache"]
+
+COPY --from=build-app /app/build/linux-amd64/monstache /bin/monstache
