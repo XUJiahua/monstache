@@ -1,1 +1,1 @@
-rwynn/monstache:6.7.17
+johnxu1989/monstache:1.0.0

@@ -27,3 +27,5 @@ _testmain.go
 *.swp
 
 dist/
+.idea
+build

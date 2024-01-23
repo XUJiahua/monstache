@@ -11,6 +11,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/rwynn/monstache/v6/pkg/sinks/console"
+	"github.com/rwynn/monstache/v6/pkg/sinks/file"
+	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
 	"io/ioutil"
 	"log"
 	"math"
@@ -136,11 +139,21 @@ type buildInfo struct {
 
 type stringargs []string
 
+type SinkConnector interface {
+	// RouteData expect op contain full document
+	RouteData(op *gtm.Op) (err error)
+	// RouteDelete _id is expected, todo: to get original document
+	RouteDelete(op *gtm.Op) (err error)
+	// RouteDrop drop database/collection
+	RouteDrop(op *gtm.Op) (err error)
+}
+
 type indexClient struct {
 	gtmCtx             *gtm.OpCtxMulti
 	config             *configOptions
 	mongo              *mongo.Client
 	mongoConfig        *mongo.Client
+	sinkConnector      SinkConnector
 	bulk               *elastic.BulkProcessor
 	bulkStats          *elastic.BulkProcessor
 	client             *elastic.Client
@@ -171,6 +184,16 @@ type indexClient struct {
 	bulkBackoff        elastic.Backoff
 	bulkBackoffC       chan time.Duration
 	bulkBackoffMax     time.Duration
+}
+
+// RouteData save to elasticsearch
+func (ic *indexClient) RouteData(op *gtm.Op) (err error) {
+	if op.Data != nil {
+		err = ic.doIndexing(op)
+	} else if op.IsUpdate() {
+		ic.doDelete(op)
+	}
+	return err
 }
 
 type sigHandler struct {
@@ -423,6 +446,12 @@ type configOptions struct {
 	PruneInvalidJSON            bool           `toml:"prune-invalid-json"`
 	Debug                       bool
 	mongoClientOptions          *options.ClientOptions
+	ConsoleSink                 bool
+	FileSink                    bool
+	KafkaSink                   bool
+	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
+	KafkaBrokers                string `toml:"kafka-brokers"`
+	KafkaTopicPrefix            string `toml:"kafka-topic-prefix"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -1851,6 +1880,9 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	flag.StringVar(&config.OplogDateFieldName, "oplog-date-field-name", "", "Field name to use for the oplog date")
 	flag.StringVar(&config.OplogDateFieldFormat, "oplog-date-field-format", "", "Format to use for the oplog date")
 	flag.BoolVar(&config.Debug, "debug", false, "True to enable verbose debug information")
+	flag.BoolVar(&config.ConsoleSink, "console", false, "True to enable console print op log")
+	flag.BoolVar(&config.FileSink, "file", false, "True to enable file sink")
+	flag.BoolVar(&config.KafkaSink, "kafka", false, "True to enable kafka sink")
 	flag.Parse()
 	return config
 }
@@ -2434,6 +2466,10 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		if !config.ElasticPKIAuth.enabled() {
 			config.ElasticPKIAuth = tomlConfig.ElasticPKIAuth
 		}
+
+		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
+		config.KafkaBrokers = tomlConfig.KafkaBrokers
+		config.KafkaTopicPrefix = tomlConfig.KafkaTopicPrefix
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
@@ -3294,11 +3330,7 @@ func (ic *indexClient) doIndexing(op *gtm.Op) (err error) {
 
 func (ic *indexClient) doIndex(op *gtm.Op) (err error) {
 	if err = ic.mapData(op); err == nil {
-		if op.Data != nil {
-			err = ic.doIndexing(op)
-		} else if op.IsUpdate() {
-			ic.doDelete(op)
-		}
+		return ic.sinkConnector.RouteData(op)
 	}
 	return
 }
@@ -3349,7 +3381,8 @@ func (ic *indexClient) routeProcess(op *gtm.Op) (err error) {
 	return
 }
 
-func (ic *indexClient) routeDrop(op *gtm.Op) (err error) {
+// RouteDrop drop indexes of ElasticSearch
+func (ic *indexClient) RouteDrop(op *gtm.Op) (err error) {
 	ic.bulk.Flush()
 	err = ic.doDrop(op)
 	return
@@ -3405,7 +3438,8 @@ func (ic *indexClient) routeDeleteRelate(op *gtm.Op) (err error) {
 
 }
 
-func (ic *indexClient) routeDelete(op *gtm.Op) (err error) {
+// RouteDelete delete in ElasticSearch
+func (ic *indexClient) RouteDelete(op *gtm.Op) (err error) {
 	if len(ic.config.Relate) > 0 {
 		err = ic.routeDeleteRelate(op)
 		if ic.skipDelete(op) {
@@ -3481,10 +3515,14 @@ func (ic *indexClient) routeOp(op *gtm.Op) (err error) {
 		err = ic.routeProcess(op)
 	}
 	if op.IsDrop() {
-		err = ic.routeDrop(op)
+		err = ic.sinkConnector.RouteDrop(op)
 	} else if op.IsDelete() {
-		err = ic.routeDelete(op)
+		// op.Data will be used further
+		op.Data = make(map[string]interface{})
+		op.Data["_id"] = op.Id
+		err = ic.sinkConnector.RouteDelete(op)
 	} else if op.Data != nil {
+		// do not directly use RouteData, as we do not prepare full document yet
 		err = ic.routeData(op)
 	}
 	return
@@ -4708,7 +4746,7 @@ func (ic *indexClient) buildTimestampGen() gtm.TimestampGenerator {
 			}
 
 			ts := <-ic.oplogTsResolver.GetResumeTimestamp(candidateTs, tsSource)
-			infoLog.Printf("Resuming from timestamp %+v", ts)
+			infoLog.Printf("Resuming from timestamp %+v, from source %s", ts, tsSource)
 			return ts, nil
 		}
 	}
@@ -5345,6 +5383,26 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 	return elasticClient
 }
 
+func buildSinkConnector(config *configOptions) SinkConnector {
+	if config.ConsoleSink {
+		return &console.Sink{}
+	}
+	if config.FileSink {
+		return &file.Sink{
+			VirtualDeleteFieldName: config.VirtualDeleteFieldName,
+		}
+	}
+	if config.KafkaSink {
+		sink, err := kafka.New(config.KafkaBrokers, config.VirtualDeleteFieldName, config.KafkaTopicPrefix)
+		if err != nil {
+			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+		}
+		return sink
+	}
+
+	return nil
+}
+
 func main() {
 
 	config := mustConfig()
@@ -5357,12 +5415,12 @@ func main() {
 	mongoClient := buildMongoClient(config)
 	loadBuiltinFunctions(mongoClient, config)
 
-	elasticClient := buildElasticClient(config)
+	sinkConnector := buildSinkConnector(config)
 
 	ic := &indexClient{
 		config:         config,
 		mongo:          mongoClient,
-		client:         elasticClient,
+		sinkConnector:  sinkConnector,
 		fileWg:         &sync.WaitGroup{},
 		indexWg:        &sync.WaitGroup{},
 		processWg:      &sync.WaitGroup{},
@@ -5381,6 +5439,11 @@ func main() {
 		bulkBackoffC:   make(chan time.Duration),
 		bulkBackoff:    elastic.NewExponentialBackoff(1*time.Minute, 1*time.Hour),
 		bulkBackoffMax: 1 * time.Hour,
+	}
+	if ic.sinkConnector == nil {
+		elasticClient := buildElasticClient(config)
+		ic.client = elasticClient
+		ic.sinkConnector = ic
 	}
 
 	ic.run()
