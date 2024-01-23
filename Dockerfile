@@ -3,12 +3,9 @@ WORKDIR /app
 COPY ./ ./
 RUN go env -w GO111MODULE=on
 RUN go env -w GOPROXY=https://goproxy.cn,direct
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o monstache
+RUN GOOS=linux GOARCH=amd64 go build -o monstache
 
-FROM debian:bookworm-slim AS runtime
-RUN apt-get update
-RUN apt-get install ca-certificates -y
-RUN update-ca-certificates
+FROM rwynn/monstache-alpine:3.17.3 AS final
 WORKDIR /app
 COPY --from=0 /app/monstache ./
 ENTRYPOINT ["./monstache"]
