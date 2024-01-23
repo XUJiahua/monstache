@@ -8,12 +8,12 @@ import (
 
 type Sink struct {
 	virtualDeleteFieldName string
-	producer               *KafkaProducer
+	producer               *KafkaProducerV2
 	topicPrefix            string
 }
 
 func New(brokers, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
-	producer, err := NewKafkaProducer(brokers)
+	producer, err := NewKafkaProducerV2(brokers)
 	if err != nil {
 		return nil, err
 	}
