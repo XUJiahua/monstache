@@ -10,7 +10,8 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "to-kafka-77723d14"
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: "cil-harbor-reg-secret"
 nameOverride: ""
 fullnameOverride: ""
 
@@ -41,7 +42,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8080
 
 ingress:
   enabled: false
@@ -73,11 +74,11 @@ resources: {}
 
 livenessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: http
 readinessProbe:
   httpGet:
-    path: /
+    path: /healthz
     port: http
 
 autoscaling:

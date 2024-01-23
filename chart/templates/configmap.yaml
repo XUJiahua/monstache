@@ -1,0 +1,12 @@
+{{- $configFolder := printf "config/%s/%s/*" .Values.sys.env .Values.sys.name -}}
+{{- $configExist := .Files.Glob $configFolder }}
+{{ if $configExist }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+data:
+{{ (.Files.Glob $configFolder).AsConfig | indent 2 }}
+{{- end}}
