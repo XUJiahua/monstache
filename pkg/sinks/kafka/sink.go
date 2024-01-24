@@ -17,7 +17,7 @@ type Sink struct {
 }
 
 func New(brokers, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
-	producer, err := NewKafkaProducer(brokers)
+	producer, err := NewKafkaProducer(brokers, nil, nil)
 	if err != nil {
 		return nil, err
 	}

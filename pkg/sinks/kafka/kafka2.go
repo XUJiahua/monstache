@@ -22,15 +22,24 @@ func (k KafkaProducer) Close() error {
 	return k.w.Close()
 }
 
-func NewKafkaProducer(brokers string) (*KafkaProducer, error) {
+type LoggerFunc func(string, ...interface{})
+
+func NewKafkaProducer(brokers string, infoL LoggerFunc, errorL LoggerFunc) (*KafkaProducer, error) {
 	brokerList := strings.Split(brokers, ",")
-	conn := &kafka.Writer{
+	w := &kafka.Writer{
 		Addr:                   kafka.TCP(brokerList...),
 		RequiredAcks:           kafka.RequireAll,
 		AllowAutoTopicCreation: true,
+		Balancer:               &kafka.Hash{},
+	}
+	if infoL != nil {
+		w.Logger = kafka.LoggerFunc(infoL)
+	}
+	if errorL != nil {
+		w.ErrorLogger = kafka.LoggerFunc(errorL)
 	}
 
 	return &KafkaProducer{
-		w: conn,
+		w: w,
 	}, nil
 }
