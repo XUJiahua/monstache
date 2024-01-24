@@ -6,14 +6,18 @@ import (
 	"github.com/rwynn/gtm/v2"
 )
 
+type Producer interface {
+	Produce(topic string, key, data []byte) error
+}
+
 type Sink struct {
 	virtualDeleteFieldName string
-	producer               *KafkaProducerV2
+	producer               *KafkaProducer
 	topicPrefix            string
 }
 
 func New(brokers, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
-	producer, err := NewKafkaProducerV2(brokers)
+	producer, err := NewKafkaProducer(brokers)
 	if err != nil {
 		return nil, err
 	}
