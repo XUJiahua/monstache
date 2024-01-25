@@ -36,13 +36,9 @@ func New(brokers, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
 	}, nil
 }
 
-func (s Sink) process(op *gtm.Op, isDelete bool) error {
-	if s.virtualDeleteFieldName != "" {
-		if isDelete {
-			op.Data[s.virtualDeleteFieldName] = 1
-		} else {
-			op.Data[s.virtualDeleteFieldName] = 0
-		}
+func (s Sink) process(op *gtm.Op, isDeleteOp bool) error {
+	if isDeleteOp && s.virtualDeleteFieldName != "" {
+		op.Data[s.virtualDeleteFieldName] = 1
 	}
 	byteData, err := json.Marshal(op.Data)
 	if err != nil {
