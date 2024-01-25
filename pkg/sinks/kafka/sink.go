@@ -12,16 +12,11 @@ type Producer interface {
 
 type Sink struct {
 	virtualDeleteFieldName string
-	producer               *KafkaProducer
+	producer               Producer
 	topicPrefix            string
 }
 
-func New(brokers, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
-	producer, err := NewKafkaProducer(brokers, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
+func New(producer Producer, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
 	if virtualDeleteFieldName == "" {
 		virtualDeleteFieldName = "is_deleted"
 	}

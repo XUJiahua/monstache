@@ -7,7 +7,8 @@ import (
 )
 
 type KafkaProducer struct {
-	w *kafka.Writer
+	w     *kafka.Writer
+	infoL LoggerFunc
 }
 
 func (k KafkaProducer) Produce(topic string, key, data []byte) error {
@@ -19,6 +20,7 @@ func (k KafkaProducer) Produce(topic string, key, data []byte) error {
 }
 
 func (k KafkaProducer) Close() error {
+	k.infoL("Closing kafka producer ...")
 	return k.w.Close()
 }
 
@@ -40,6 +42,7 @@ func NewKafkaProducer(brokers string, infoL LoggerFunc, errorL LoggerFunc) (*Kaf
 	}
 
 	return &KafkaProducer{
-		w: w,
+		w:     w,
+		infoL: infoL,
 	}, nil
 }

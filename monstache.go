@@ -184,6 +184,7 @@ type indexClient struct {
 	bulkBackoff        elastic.Backoff
 	bulkBackoffC       chan time.Duration
 	bulkBackoffMax     time.Duration
+	cleanOnExit        []Closer
 }
 
 // RouteData save to elasticsearch
@@ -5214,6 +5215,11 @@ func (ic *indexClient) closeClient() {
 
 func (ic *indexClient) shutdown(timeout int) {
 	infoLog.Println("Shutting down")
+	for _, closer := range ic.cleanOnExit {
+		if err := closer.Close(); err != nil {
+			warnLog.Printf("close failed")
+		}
+	}
 	go ic.closeClient()
 	doneC := make(chan bool)
 	go func() {
@@ -5383,24 +5389,42 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 	return elasticClient
 }
 
-func buildSinkConnector(config *configOptions) SinkConnector {
+type Closer interface {
+	Close() error
+}
+
+func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
+	var closers []Closer
 	if config.ConsoleSink {
-		return &console.Sink{}
+		return &console.Sink{}, closers
 	}
 	if config.FileSink {
 		return &file.Sink{
 			VirtualDeleteFieldName: config.VirtualDeleteFieldName,
-		}
+		}, closers
 	}
+
 	if config.KafkaSink {
-		sink, err := kafka.New(config.KafkaBrokers, config.VirtualDeleteFieldName, config.KafkaTopicPrefix)
+		producer, err := kafka.NewKafkaProducer(config.KafkaBrokers, func(s string, i ...interface{}) {
+			infoLog.Printf(s, i...)
+		}, func(s string, i ...interface{}) {
+			errorLog.Printf(s, i...)
+		})
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
-		return sink
+
+		sink, err := kafka.New(producer, config.VirtualDeleteFieldName, config.KafkaTopicPrefix)
+		if err != nil {
+			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+		}
+
+		closers = append(closers, producer)
+
+		return sink, closers
 	}
 
-	return nil
+	return nil, closers
 }
 
 func main() {
@@ -5415,9 +5439,9 @@ func main() {
 	mongoClient := buildMongoClient(config)
 	loadBuiltinFunctions(mongoClient, config)
 
-	sinkConnector := buildSinkConnector(config)
-
+	sinkConnector, closers := buildSinkConnector(config)
 	ic := &indexClient{
+		cleanOnExit:    closers,
 		config:         config,
 		mongo:          mongoClient,
 		sinkConnector:  sinkConnector,
