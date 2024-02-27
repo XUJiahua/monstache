@@ -1,5 +1,7 @@
 module github.com/rwynn/monstache/v6
 
+//replace github.com/rwynn/gtm/v2 => ../gtm
+
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/aws/aws-sdk-go v1.44.239
