@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rwynn/gtm/v2"
-	"github.com/rwynn/monstache/v6/pkg/metrics"
 )
 
 type Producer interface {
@@ -54,8 +53,6 @@ func (s Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	if err != nil {
 		// handle error
 	}
-
-	metrics.OpsProcessed.WithLabelValues("kafka").Inc()
 
 	return err
 }

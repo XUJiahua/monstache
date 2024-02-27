@@ -2,8 +2,10 @@ package kafka
 
 import (
 	"context"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/segmentio/kafka-go"
 	"strings"
+	"time"
 )
 
 type KafkaProducer struct {
@@ -12,6 +14,13 @@ type KafkaProducer struct {
 }
 
 func (k KafkaProducer) Produce(topic string, key, data []byte) error {
+	start := time.Now()
+	defer func() {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metrics.OpsProcessedLatencyHistogram.WithLabelValues("kafka").Observe(elapsed)
+		metrics.OpsProcessed.WithLabelValues("kafka").Inc()
+	}()
+
 	return k.w.WriteMessages(context.TODO(), kafka.Message{
 		Topic: topic,
 		Key:   key,

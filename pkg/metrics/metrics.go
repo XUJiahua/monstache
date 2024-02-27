@@ -15,4 +15,12 @@ var (
 		Name: "monstache_processed_ops_total",
 		Help: "The total number of processed oplogs by sink",
 	}, []string{"sink"})
+
+	OpsProcessedLatencyHistogram = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "monstache_processed_ops_latency",
+		Help:    "How long (ms) ops processed by sink",
+		Buckets: []float64{100, 300, 500, 1000},
+	}, []string{
+		"sink",
+	})
 )
