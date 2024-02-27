@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rwynn/gtm/v2"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
 )
 
 type Producer interface {
@@ -49,7 +50,14 @@ func (s Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	}
 	topic := fmt.Sprintf("%s%s", s.topicPrefix, op.Namespace)
 	key := fmt.Sprintf("%v", op.Id)
-	return s.producer.Produce(topic, []byte(key), byteData)
+	err = s.producer.Produce(topic, []byte(key), byteData)
+	if err != nil {
+		// handle error
+	}
+
+	metrics.OpsProcessed.WithLabelValues("kafka").Inc()
+
+	return err
 }
 
 func (s Sink) RouteData(op *gtm.Op) (err error) {
@@ -57,10 +65,6 @@ func (s Sink) RouteData(op *gtm.Op) (err error) {
 }
 
 func (s Sink) RouteDelete(op *gtm.Op) (err error) {
-	if op.IsSourceOplog() && s.opTimeFieldName != "" {
-		// add new column op_time for tracing/debugging
-		op.Data[s.opTimeFieldName] = op.Timestamp.T
-	}
 	return s.process(op, true)
 }
 

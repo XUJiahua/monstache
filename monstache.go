@@ -11,6 +11,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
@@ -166,7 +168,7 @@ type indexClient struct {
 	closeC             chan bool
 	doneC              chan int
 	enabled            bool
-	lastTs             primitive.Timestamp
+	lastTs             primitive.Timestamp // default value is 0
 	lastTsSaved        primitive.Timestamp
 	tokens             bson.M
 	indexC             chan *gtm.Op
@@ -4310,6 +4312,7 @@ func (ctx *httpServerCtx) buildServer() {
 			break
 		}
 	})
+	mux.Handle("/metrics", promhttp.Handler())
 	if ctx.config.Pprof {
 		mux.HandleFunc("/debug/pprof/", pprof.Index)
 		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -5128,6 +5131,9 @@ func (ic *indexClient) eventLoop() {
 				}
 				break
 			}
+
+			metrics.OpsReceived.WithLabelValues(op.Namespace, op.Operation).Inc()
+
 			if op.IsSourceOplog() {
 				ic.lastTs = op.Timestamp
 				if ic.config.ResumeStrategy == tokenResumeStrategy {
