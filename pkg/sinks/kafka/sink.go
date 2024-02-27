@@ -12,13 +12,17 @@ type Producer interface {
 
 type Sink struct {
 	virtualDeleteFieldName string
+	opTimeFieldName        string
 	producer               Producer
 	topicPrefix            string
 }
 
-func New(producer Producer, virtualDeleteFieldName, topicPrefix string) (*Sink, error) {
+func New(producer Producer, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
 	if virtualDeleteFieldName == "" {
 		virtualDeleteFieldName = "is_deleted"
+	}
+	if opTimeFieldName == "" {
+		opTimeFieldName = "op_time"
 	}
 	if topicPrefix == "" {
 		topicPrefix = "monstache."
@@ -35,6 +39,10 @@ func (s Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	if isDeleteOp && s.virtualDeleteFieldName != "" {
 		op.Data[s.virtualDeleteFieldName] = 1
 	}
+	if op.IsSourceOplog() && s.opTimeFieldName != "" {
+		// add new column op_time for tracing/debugging
+		op.Data[s.opTimeFieldName] = op.Timestamp.T
+	}
 	byteData, err := json.Marshal(op.Data)
 	if err != nil {
 		return err
@@ -49,6 +57,10 @@ func (s Sink) RouteData(op *gtm.Op) (err error) {
 }
 
 func (s Sink) RouteDelete(op *gtm.Op) (err error) {
+	if op.IsSourceOplog() && s.opTimeFieldName != "" {
+		// add new column op_time for tracing/debugging
+		op.Data[s.opTimeFieldName] = op.Timestamp.T
+	}
 	return s.process(op, true)
 }
 

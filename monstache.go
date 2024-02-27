@@ -451,6 +451,7 @@ type configOptions struct {
 	FileSink                    bool
 	KafkaSink                   bool
 	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
+	OpTimeFieldName             string `toml:"op-time-field-name"`
 	KafkaBrokers                string `toml:"kafka-brokers"`
 	KafkaTopicPrefix            string `toml:"kafka-topic-prefix"`
 }
@@ -2469,6 +2470,7 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		}
 
 		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
+		config.OpTimeFieldName = tomlConfig.OpTimeFieldName
 		config.KafkaBrokers = tomlConfig.KafkaBrokers
 		config.KafkaTopicPrefix = tomlConfig.KafkaTopicPrefix
 		config.GtmSettings = tomlConfig.GtmSettings
@@ -5414,7 +5416,7 @@ func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		sink, err := kafka.New(producer, config.VirtualDeleteFieldName, config.KafkaTopicPrefix)
+		sink, err := kafka.New(producer, config.VirtualDeleteFieldName, config.OpTimeFieldName, config.KafkaTopicPrefix)
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
