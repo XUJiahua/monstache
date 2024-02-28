@@ -13,6 +13,7 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
 	github.com/rwynn/gtm/v2 v2.1.2
 	github.com/segmentio/kafka-go v0.4.47
+	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.2
 	go.mongodb.org/mongo-driver v1.10.6
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
