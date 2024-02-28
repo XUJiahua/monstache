@@ -22,3 +22,7 @@ func (sink Sink) RouteDelete(op *gtm.Op) (err error) {
 	fmt.Println(op)
 	return nil
 }
+
+func (sink Sink) Flush() error {
+	return nil
+}

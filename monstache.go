@@ -5424,7 +5424,7 @@ func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
 
 	if config.KafkaSink {
 		producer, err := kafka.NewKafkaProducer(config.KafkaBrokers, func(s string, i ...interface{}) {
-			infoLog.Printf(s, i...)
+			traceLog.Printf(s, i...)
 		}, func(s string, i ...interface{}) {
 			errorLog.Printf(s, i...)
 		})

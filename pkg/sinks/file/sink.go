@@ -38,3 +38,7 @@ func (s Sink) RouteDelete(op *gtm.Op) (err error) {
 func (s Sink) RouteDrop(op *gtm.Op) (err error) {
 	return nil
 }
+
+func (s Sink) Flush() error {
+	return nil
+}
