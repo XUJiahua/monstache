@@ -44,6 +44,7 @@ func New(producer Producer, virtualDeleteFieldName, opTimeFieldName, topicPrefix
 		producer:               producer,
 		virtualDeleteFieldName: virtualDeleteFieldName,
 		topicPrefix:            topicPrefix,
+		opTimeFieldName:        opTimeFieldName,
 		doneC:                  doneC,
 	}
 
