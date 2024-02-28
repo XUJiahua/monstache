@@ -1,7 +1,9 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
+	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/require"
 	"log"
 	"os"
@@ -38,4 +40,25 @@ func BenchmarkProduce(b *testing.B) {
 		err := producer.Produce("topic", []byte("a"), []byte("b"))
 		require.NoError(b, err)
 	}
+}
+
+func TestKafkaProducer_ProduceBatch(t *testing.T) {
+	p, err := NewKafkaProducer("10.30.11.112:9092", func(s string, i ...interface{}) {
+		fmt.Printf(s, i...)
+		fmt.Println()
+	}, func(s string, i ...interface{}) {
+		fmt.Printf(s, i...)
+		fmt.Println()
+	})
+	require.NoError(t, err)
+
+	// produce two message which belongs to different topics
+	err = p.ProduceBatch(context.TODO(), kafka.Message{
+		Topic: "a.topic",
+		Value: []byte("a"),
+	}, kafka.Message{
+		Topic: "b.topic",
+		Value: []byte("b"),
+	})
+	require.NoError(t, err)
 }
