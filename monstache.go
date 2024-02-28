@@ -148,6 +148,8 @@ type SinkConnector interface {
 	RouteDelete(op *gtm.Op) (err error)
 	// RouteDrop drop database/collection
 	RouteDrop(op *gtm.Op) (err error)
+	// Flush the batch messages
+	Flush() error
 }
 
 type indexClient struct {
@@ -3393,6 +3395,10 @@ func (ic *indexClient) RouteDrop(op *gtm.Op) (err error) {
 	return
 }
 
+func (ic *indexClient) Flush() error {
+	return ic.bulk.Flush()
+}
+
 func (ic *indexClient) skipDelete(op *gtm.Op) bool {
 	if rs := relates[op.Namespace]; len(rs) != 0 {
 		for _, r := range rs {
@@ -4980,7 +4986,9 @@ func (ic *indexClient) hasNewEvents() bool {
 
 func (ic *indexClient) nextTokens() {
 	if ic.hasNewEvents() {
-		ic.bulk.Flush()
+		if err := ic.sinkConnector.Flush(); err != nil {
+			ic.processErr(err)
+		}
 		if err := ic.saveTokens(); err == nil {
 			ic.lastTsSaved = ic.lastTs
 		} else {
@@ -4991,7 +4999,9 @@ func (ic *indexClient) nextTokens() {
 
 func (ic *indexClient) nextTimestamp() {
 	if ic.hasNewEvents() {
-		ic.bulk.Flush()
+		if err := ic.sinkConnector.Flush(); err != nil {
+			ic.processErr(err)
+		}
 		if err := ic.saveTimestamp(); err == nil {
 			ic.lastTsSaved = ic.lastTs
 		} else {
@@ -5427,7 +5437,8 @@ func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		closers = append(closers, producer)
+		// sink will close producer internally
+		closers = append(closers, sink)
 
 		return sink, closers
 	}
