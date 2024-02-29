@@ -12,6 +12,9 @@ import (
 )
 
 type BulkableRequest interface {
+	GetTopic() string
+	GetKey() []byte
+	GetValue() []byte
 }
 
 type Client interface {

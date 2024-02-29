@@ -5,29 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rwynn/gtm/v2"
-	"github.com/segmentio/kafka-go"
-	"github.com/sirupsen/logrus"
-	"sync"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"time"
 )
 
-type Producer interface {
-	Produce(topic string, key, data []byte) error
-	ProduceBatch(ctx context.Context, msgs ...kafka.Message) error
-	Close() error
+type Request struct {
+	topic string
+	key   []byte
+	value []byte
+}
+
+func (r Request) GetTopic() string {
+	return r.topic
+}
+
+func (r Request) GetKey() []byte {
+	return r.key
+}
+
+func (r Request) GetValue() []byte {
+	return r.value
 }
 
 type Sink struct {
 	virtualDeleteFieldName string
 	opTimeFieldName        string
-	producer               Producer
 	topicPrefix            string
-	rwlock                 sync.RWMutex
-	messages               []kafka.Message
-	doneC                  chan struct{}
+	bulkProcessor          *bulk.BulkProcessor
 }
 
-func New(producer Producer, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
+func (s *Sink) Flush() error {
+	return s.bulkProcessor.Flush()
+}
+
+func New(client bulk.Client, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
+	bulkProcessorService := bulk.NewBulkProcessorService(client)
+	bulkProcessorService.Workers(1)
+	bulkProcessorService.BulkActions(1000)
+	bulkProcessorService.FlushInterval(5 * time.Second)
+	bulkProcessor, err := bulkProcessorService.Do(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
 	if virtualDeleteFieldName == "" {
 		virtualDeleteFieldName = "is_deleted"
 	}
@@ -38,50 +58,14 @@ func New(producer Producer, virtualDeleteFieldName, opTimeFieldName, topicPrefix
 		topicPrefix = "monstache."
 	}
 
-	doneC := make(chan struct{})
-
 	sink := &Sink{
-		producer:               producer,
 		virtualDeleteFieldName: virtualDeleteFieldName,
 		topicPrefix:            topicPrefix,
 		opTimeFieldName:        opTimeFieldName,
-		doneC:                  doneC,
+		bulkProcessor:          bulkProcessor,
 	}
-
-	go func() {
-		logrus.Infof("flusher started")
-		timestampTicker := time.NewTicker(5 * time.Second)
-		defer timestampTicker.Stop()
-		for {
-			select {
-			case <-doneC:
-				logrus.Infof("flusher stopped")
-				return
-			case <-timestampTicker.C:
-				logrus.Debug("tick...")
-				if err := sink.Flush(); err != nil {
-					logrus.Errorf("kafka flush failed: %v", err)
-				}
-			}
-		}
-
-	}()
 
 	return sink, nil
-}
-
-func (s *Sink) Flush() error {
-	var err error
-	s.rwlock.Lock()
-	defer s.rwlock.Unlock()
-	if len(s.messages) != 0 {
-		err = s.producer.ProduceBatch(context.TODO(), s.messages...)
-		if err == nil {
-			s.messages = nil
-		}
-	}
-
-	return err
 }
 
 func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
@@ -99,10 +83,12 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	topic := fmt.Sprintf("%s%s", s.topicPrefix, op.Namespace)
 	key := fmt.Sprintf("%v", op.Id)
 
-	message := kafka.Message{Topic: topic, Key: []byte(key), Value: byteData}
-	s.rwlock.Lock()
-	s.messages = append(s.messages, message)
-	s.rwlock.Unlock()
+	request := Request{
+		topic: topic,
+		key:   []byte(key),
+		value: byteData,
+	}
+	s.bulkProcessor.Add(request)
 
 	return nil
 }
@@ -120,6 +106,5 @@ func (s *Sink) RouteDrop(op *gtm.Op) (err error) {
 }
 
 func (s *Sink) Close() error {
-	s.doneC <- struct{}{}
-	return s.producer.Close()
+	return s.bulkProcessor.Close()
 }

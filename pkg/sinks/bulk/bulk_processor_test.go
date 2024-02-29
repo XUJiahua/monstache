@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/rwynn/gtm/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,6 +11,23 @@ import (
 	"testing"
 	"time"
 )
+
+type MockRequest struct{}
+
+func (m MockRequest) GetTopic() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m MockRequest) GetKey() []byte {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m MockRequest) GetValue() []byte {
+	//TODO implement me
+	panic("implement me")
+}
 
 type MockClient struct {
 	i int
@@ -31,14 +47,14 @@ func TestNewBulkService(t *testing.T) {
 	bulkService := NewBulkService(&MockClient{})
 	{
 		for i := 0; i < 3; i++ {
-			bulkService.Add(&gtm.Op{})
+			bulkService.Add(&MockRequest{})
 		}
 		err := bulkService.Do(context.TODO())
 		require.NoError(t, err)
 	}
 	{
 		for i := 0; i < 3; i++ {
-			bulkService.Add(&gtm.Op{})
+			bulkService.Add(&MockRequest{})
 		}
 		err := bulkService.Do(context.TODO())
 		require.Error(t, err)
@@ -91,7 +107,7 @@ func Test_NewBulkProcessorService(t *testing.T) {
 		for {
 			select {
 			case <-ticker.C:
-				bulkProcessor.Add(&gtm.Op{})
+				bulkProcessor.Add(&MockRequest{})
 				sentRequests++
 			case <-closeC:
 				fmt.Println("exit message producer")

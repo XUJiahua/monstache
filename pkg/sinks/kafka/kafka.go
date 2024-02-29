@@ -1,56 +1,83 @@
 package kafka
 
-//import (
-//	"github.com/confluentinc/confluent-kafka-go/kafka"
-//	"github.com/sirupsen/logrus"
-//)
-//
-//type KafkaProducer struct {
-//	p *kafka.Producer
-//}
-//
-//func NewKafkaProducer(brokers string) (*KafkaProducer, error) {
-//	conf := &kafka.ConfigMap{
-//		"bootstrap.servers": brokers,
-//		"acks":              "all",
-//	}
-//
-//	p, err := kafka.NewProducer(conf)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// Go-routine to handle message delivery reports and
-//	// possibly other event types (errors, stats, etc)
-//	go func() {
-//		for e := range p.Events() {
-//			switch ev := e.(type) {
-//			case *kafka.Message:
-//				if ev.TopicPartition.Error != nil {
-//					logrus.Errorf("Failed to deliver message: %v", ev.TopicPartition)
-//				} else {
-//					logrus.Debugf("Produced event to topic %s: key = %-10s value = %s",
-//						*ev.TopicPartition.Topic, string(ev.Key), string(ev.Value))
-//				}
-//			}
-//		}
-//	}()
-//	return &KafkaProducer{
-//		p: p,
-//	}, nil
-//}
-//
-//func (k KafkaProducer) Produce(topic string, key, data []byte) error {
-//	return k.p.Produce(&kafka.Message{
-//		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-//		Key:            key,
-//		Value:          data,
-//	}, nil)
-//}
-//
-//func (k KafkaProducer) Close() error {
-//	// Wait for all messages to be delivered
-//	k.p.Flush(15 * 1000)
-//	k.p.Close()
-//	return nil
-//}
+import (
+	"context"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/segmentio/kafka-go"
+	"strings"
+	"time"
+)
+
+type KafkaProducer struct {
+	w     *kafka.Writer
+	infoL LoggerFunc
+}
+
+func (k KafkaProducer) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
+	messages := make([]kafka.Message, len(requests))
+	for _, request := range requests {
+		message := kafka.Message{
+			Topic: request.GetTopic(),
+			Key:   request.GetKey(),
+			Value: request.GetValue(),
+		}
+		messages = append(messages, message)
+	}
+
+	return k.ProduceBatch(ctx, messages...)
+}
+
+func (k KafkaProducer) Produce(topic string, key, data []byte) error {
+	start := time.Now()
+	defer func() {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metrics.OpsProcessedLatencyHistogram.WithLabelValues("kafka").Observe(elapsed)
+		metrics.OpsProcessed.WithLabelValues("kafka").Inc()
+	}()
+
+	return k.w.WriteMessages(context.TODO(), kafka.Message{
+		Topic: topic,
+		Key:   key,
+		Value: data,
+	})
+}
+
+func (k KafkaProducer) ProduceBatch(ctx context.Context, msgs ...kafka.Message) error {
+	start := time.Now()
+	defer func() {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metrics.OpsProcessedLatencyHistogram.WithLabelValues("kafka").Observe(elapsed)
+		metrics.OpsProcessed.WithLabelValues("kafka").Add(float64(len(msgs)))
+	}()
+
+	return k.w.WriteMessages(ctx, msgs...)
+}
+
+func (k KafkaProducer) Close() error {
+	k.infoL("Closing kafka producer ...")
+	return k.w.Close()
+}
+
+type LoggerFunc func(string, ...interface{})
+
+func NewKafkaProducer(brokers string, infoL LoggerFunc, errorL LoggerFunc) (*KafkaProducer, error) {
+	brokerList := strings.Split(brokers, ",")
+	w := &kafka.Writer{
+		Addr:                   kafka.TCP(brokerList...),
+		RequiredAcks:           kafka.RequireAll,
+		AllowAutoTopicCreation: true,
+		Balancer:               &kafka.Hash{},
+	}
+	if infoL != nil {
+		w.Logger = kafka.LoggerFunc(infoL)
+	}
+	if errorL != nil {
+		w.ErrorLogger = kafka.LoggerFunc(errorL)
+	}
+
+	return &KafkaProducer{
+		w:     w,
+		infoL: infoL,
+	}, nil
+}
