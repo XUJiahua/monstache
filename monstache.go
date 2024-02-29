@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
@@ -622,6 +623,23 @@ func (ic *indexClient) afterBulk() func(int64, []elastic.BulkableRequest, *elast
 				ic.bulkErrs.Add(1)
 			}
 		}
+	}
+}
+
+func (ic *indexClient) afterBulkCommon() func(int64, []bulk.BulkableRequest, error) {
+	return func(executionID int64, requests []bulk.BulkableRequest, err error) {
+		if err == nil {
+			// reset!
+			ic.bulkErrs.Store(0)
+			return
+		}
+		wait := ic.backoffDuration()
+		infoLog.Printf("Backing off for %.1f minutes after bulk indexing failures.", wait.Minutes())
+		// signal the event loop to pause pulling new events for a duration
+		ic.bulkBackoffC <- wait
+		// pause the bulk worker for a duration
+		ic.backoff(wait)
+		ic.bulkErrs.Add(1)
 	}
 }
 
@@ -5411,7 +5429,7 @@ type Closer interface {
 	Close() error
 }
 
-func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
+func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (SinkConnector, []Closer) {
 	var closers []Closer
 	if config.ConsoleSink {
 		return &console.Sink{}, closers
@@ -5432,7 +5450,7 @@ func buildSinkConnector(config *configOptions) (SinkConnector, []Closer) {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		sink, err := kafka.New(producer, config.VirtualDeleteFieldName, config.OpTimeFieldName, config.KafkaTopicPrefix)
+		sink, err := kafka.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName, config.KafkaTopicPrefix)
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
@@ -5458,12 +5476,9 @@ func main() {
 	mongoClient := buildMongoClient(config)
 	loadBuiltinFunctions(mongoClient, config)
 
-	sinkConnector, closers := buildSinkConnector(config)
 	ic := &indexClient{
-		cleanOnExit:    closers,
 		config:         config,
 		mongo:          mongoClient,
-		sinkConnector:  sinkConnector,
 		fileWg:         &sync.WaitGroup{},
 		indexWg:        &sync.WaitGroup{},
 		processWg:      &sync.WaitGroup{},
@@ -5483,7 +5498,13 @@ func main() {
 		bulkBackoff:    elastic.NewExponentialBackoff(1*time.Minute, 1*time.Hour),
 		bulkBackoffMax: 1 * time.Hour,
 	}
-	if ic.sinkConnector == nil {
+	// use global backoff to slow down source (oplog) and sink (bulk worker) if bulk commit failed
+	afterBulk := ic.afterBulkCommon()
+	sinkConnector, closers := buildSinkConnector(config, afterBulk)
+	if sinkConnector != nil {
+		ic.sinkConnector = sinkConnector
+		ic.cleanOnExit = closers
+	} else {
 		elasticClient := buildElasticClient(config)
 		ic.client = elasticClient
 		ic.sinkConnector = ic

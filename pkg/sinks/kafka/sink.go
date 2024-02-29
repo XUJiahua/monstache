@@ -38,11 +38,12 @@ func (s *Sink) Flush() error {
 	return s.bulkProcessor.Flush()
 }
 
-func New(client bulk.Client, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
+func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
 	bulkProcessorService := bulk.NewBulkProcessorService(client)
 	bulkProcessorService.Workers(1)
 	bulkProcessorService.BulkActions(1000)
 	bulkProcessorService.FlushInterval(5 * time.Second)
+	bulkProcessorService.After(afterBulk)
 	bulkProcessor, err := bulkProcessorService.Do(context.TODO())
 	if err != nil {
 		return nil, err
@@ -93,6 +94,7 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	return nil
 }
 
+// RouteData json document for op insert or update
 func (s *Sink) RouteData(op *gtm.Op) (err error) {
 	return s.process(op, false)
 }
