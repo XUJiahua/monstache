@@ -642,6 +642,7 @@ func (ic *indexClient) afterBulkCommon() func(int64, []bulk.BulkableRequest, err
 		infoLog.Printf("Backing off for %.1f minutes after bulk indexing failures.", wait.Minutes())
 		// signal the event loop to pause pulling new events for a duration
 		ic.bulkBackoffC <- wait
+		logrus.Infof("eventloop and bulk worker will back off for %.1f minutes", wait.Minutes())
 		// pause the bulk worker for a duration
 		ic.backoff(wait)
 		ic.bulkErrs.Add(1)
@@ -4604,6 +4605,7 @@ func (ic *indexClient) stopAllWorkers() {
 	infoLog.Println("Stopping all workers")
 	ic.gtmCtx.Stop()
 	logrus.Info("gtmCtx stopped")
+	// fixme: may hang during backoff
 	<-ic.opsConsumed
 	close(ic.relateC)
 	ic.relateWg.Wait()
