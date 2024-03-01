@@ -50,10 +50,10 @@ func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldNam
 	}
 
 	if virtualDeleteFieldName == "" {
-		virtualDeleteFieldName = "is_deleted"
+		virtualDeleteFieldName = "__is_deleted"
 	}
 	if opTimeFieldName == "" {
-		opTimeFieldName = "op_time"
+		opTimeFieldName = "__op_time"
 	}
 	if topicPrefix == "" {
 		topicPrefix = "monstache."

@@ -86,7 +86,7 @@ relate-buffer = 0
 post-processors = 0
 prune-invalid-json = false
 Debug = false
-virtual-delete-field-name = "is_deleted"
+virtual-delete-field-name = "__is_deleted"
 kafka-brokers = "10.30.11.112:9092"
 kafka-topic-prefix = "monstache."
 
