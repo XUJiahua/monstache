@@ -17,6 +17,7 @@ import (
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"
 	"math"
@@ -628,6 +629,10 @@ func (ic *indexClient) afterBulk() func(int64, []elastic.BulkableRequest, *elast
 
 func (ic *indexClient) afterBulkCommon() func(int64, []bulk.BulkableRequest, error) {
 	return func(executionID int64, requests []bulk.BulkableRequest, err error) {
+		if !ic.enabled {
+			logrus.Infof("ic is disabled, no backoff")
+			return
+		}
 		if err == nil {
 			// reset!
 			ic.bulkErrs.Store(0)
@@ -4598,15 +4603,20 @@ func (ic *indexClient) directReadChan() chan struct{} {
 func (ic *indexClient) stopAllWorkers() {
 	infoLog.Println("Stopping all workers")
 	ic.gtmCtx.Stop()
+	logrus.Info("gtmCtx stopped")
 	<-ic.opsConsumed
 	close(ic.relateC)
 	ic.relateWg.Wait()
+	logrus.Info("relateWg stopped")
 	close(ic.fileC)
 	ic.fileWg.Wait()
+	logrus.Info("fileWg stopped")
 	close(ic.indexC)
 	ic.indexWg.Wait()
+	logrus.Info("indexWg stopped")
 	close(ic.processC)
 	ic.processWg.Wait()
+	logrus.Info("processWg stopped")
 }
 
 func (ic *indexClient) startReadWait() {

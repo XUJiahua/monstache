@@ -205,6 +205,7 @@ func (p *BulkProcessor) Start(ctx context.Context) error {
 		p.numWorkers = 1
 	}
 
+	logrus.Infof("starting %d bulk workers", p.numWorkers)
 	p.requestsC = make(chan BulkableRequest)
 	p.workers = make([]*bulkWorker, p.numWorkers)
 	for i := 0; i < p.numWorkers; i++ {
@@ -215,6 +216,7 @@ func (p *BulkProcessor) Start(ctx context.Context) error {
 
 	// Start the ticker for flush (if enabled)
 	if int64(p.flushInterval) > 0 {
+		logrus.Infof("starting flusher")
 		p.flusherStopC = make(chan struct{})
 		go p.flusher(p.flushInterval)
 	}
@@ -235,15 +237,19 @@ func (p *BulkProcessor) Close() error {
 
 	// Stop flusher (if enabled)
 	if p.flusherStopC != nil {
+		logrus.Infof("stopping flusher")
 		p.flusherStopC <- struct{}{}
 		<-p.flusherStopC
 		close(p.flusherStopC)
 		p.flusherStopC = nil
+		logrus.Infof("flusher stopped")
 	}
 
 	// Stop all workers.
+	logrus.Infof("stopping all workers")
 	close(p.requestsC)
 	p.workerWg.Wait()
+	logrus.Infof("all workers stopped")
 
 	p.started = false
 
@@ -382,7 +388,7 @@ func (w *bulkWorker) commit(ctx context.Context) error {
 	// backoff.NewExponentialBackOff() is stateful, new one for every Retry
 	err := backoff.RetryNotify(commitFunc, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), notifyFunc)
 	if err != nil {
-		logrus.Errorf("bulk processor failed with err: %v", err)
+		logrus.Warnf("bulk processor failed with err: %v", err)
 	}
 
 	// Invoke after callback
