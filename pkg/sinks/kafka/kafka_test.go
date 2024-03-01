@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/require"
 	"log"
@@ -43,6 +44,21 @@ func BenchmarkProduce(b *testing.B) {
 }
 
 func TestKafkaProducer_ProduceBatch(t *testing.T) {
+	p := getInstance(t)
+
+	// produce two message which belongs to different topics
+	err := p.ProduceBatch(context.TODO(), kafka.Message{
+		Topic: "monstache.db1.col1",
+		Key:   []byte("a"),
+		Value: []byte("a"),
+	}, kafka.Message{
+		Topic: "b.topic",
+		Value: []byte("b"),
+	})
+	require.NoError(t, err)
+}
+
+func getInstance(t *testing.T) *KafkaProducer {
 	p, err := NewKafkaProducer("10.30.11.112:9092", func(s string, i ...interface{}) {
 		fmt.Printf(s, i...)
 		fmt.Println()
@@ -51,14 +67,15 @@ func TestKafkaProducer_ProduceBatch(t *testing.T) {
 		fmt.Println()
 	})
 	require.NoError(t, err)
+	return p
+}
 
-	// produce two message which belongs to different topics
-	err = p.ProduceBatch(context.TODO(), kafka.Message{
-		Topic: "a.topic",
-		Value: []byte("a"),
-	}, kafka.Message{
-		Topic: "b.topic",
-		Value: []byte("b"),
-	})
+func TestKafkaProducer_Commit(t *testing.T) {
+	p := getInstance(t)
+	err := p.Commit(context.TODO(), []bulk.BulkableRequest{Request{
+		topic: "monstache.db1.col1",
+		key:   []byte("a"),
+		value: []byte("a"),
+	}})
 	require.NoError(t, err)
 }

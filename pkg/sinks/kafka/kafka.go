@@ -16,13 +16,13 @@ type KafkaProducer struct {
 
 func (k KafkaProducer) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
 	messages := make([]kafka.Message, len(requests))
-	for _, request := range requests {
+	for i, request := range requests {
 		message := kafka.Message{
 			Topic: request.GetTopic(),
 			Key:   request.GetKey(),
 			Value: request.GetValue(),
 		}
-		messages = append(messages, message)
+		messages[i] = message
 	}
 
 	return k.ProduceBatch(ctx, messages...)
