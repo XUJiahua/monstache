@@ -361,25 +361,26 @@ func (w *bulkWorker) commitRequired() bool {
 }
 
 func (w *bulkWorker) commit(ctx context.Context) error {
-	// commit using client
-	commitFunc := func() error {
-		return w.service.Do(ctx)
-	}
-	notifyFunc := func(err error, duration time.Duration) {
-		logrus.Warnf("bulk processor failed with err: %v, but may retry in %v", err, duration)
-	}
 
 	// Save requests because they will be reset in commitFunc
 	reqs := w.service.requests
 
 	id := atomic.AddInt64(&w.p.executionId, 1)
+
+	// commit using client
+	commitFunc := func() error {
+		return w.service.Do(ctx)
+	}
+	notifyFunc := func(err error, duration time.Duration) {
+		logrus.Warnf("bulk processor [%d] failed with err: %v, but may retry in %v", id, err, duration)
+	}
 	// Invoke before callback
 	if w.p.beforeFn != nil {
 		w.p.beforeFn(id, reqs)
 	}
 
 	// backoff.NewExponentialBackOff() is stateful, new one for every Retry
-	err := backoff.RetryNotify(commitFunc, backoff.NewExponentialBackOff(), notifyFunc)
+	err := backoff.RetryNotify(commitFunc, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3), notifyFunc)
 	if err != nil {
 		logrus.Errorf("bulk processor failed with err: %v", err)
 	}
