@@ -14,7 +14,11 @@ func TestClient_BatchInsert(t *testing.T) {
 	err = json.Unmarshal(data, &rows)
 	require.NoError(t, err)
 
-	client := NewClient("http://10.30.11.112:8123/")
+	client := NewClient(ClickHouseConfig{
+		Endpoint:           "http://10.30.11.112:8123/",
+		SkipUnknownFields:  true,
+		DateTimeBestEffort: true,
+	})
 	err = client.BatchInsert("evocloud", "settle_evo_trans", rows)
 	require.NoError(t, err)
 }
