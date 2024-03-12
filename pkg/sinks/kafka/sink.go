@@ -53,6 +53,8 @@ func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldNam
 		opTimeFieldName = "__op_time"
 	}
 
+	// fixme: __update_time derived from updateTime
+
 	sink := &Sink{
 		virtualDeleteFieldName: virtualDeleteFieldName,
 		opTimeFieldName:        opTimeFieldName,
