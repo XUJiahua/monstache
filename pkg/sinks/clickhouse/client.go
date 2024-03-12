@@ -2,6 +2,7 @@ package clickhouse
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -68,20 +69,34 @@ func (c Client) BatchInsert(database, table string, rows []interface{}) error {
 	finalURL := u.String()
 	logrus.Debugf("request URL: %s", finalURL)
 
-	// todo: compression
+	// compression
+	// https://clickhouse.com/docs/en/interfaces/http#compression
 	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
 	for _, user := range rows {
 		jsonData, err := json.Marshal(user)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Error marshal json")
 		}
-		buf.Write(jsonData)
-		buf.WriteString("\n") // Delimiter for JSONEachRow format
+		_, err = gzipWriter.Write(jsonData)
+		if err != nil {
+			return errors.Wrap(err, "Error writing GZIP writer")
+		}
+		_, err = gzipWriter.Write([]byte("\n")) // Delimiter for JSONEachRow format
+		if err != nil {
+			return errors.Wrap(err, "Error writing GZIP writer")
+		}
 	}
+	if err := gzipWriter.Close(); err != nil {
+		return errors.Wrap(err, "Error closing GZIP writer")
+	}
+
 	req, err := http.NewRequest("POST", finalURL, &buf)
 	if err != nil {
 		return errors.Wrap(err, "failed to build request")
 	}
+
+	req.Header.Set("Content-Encoding", "gzip")
 	// setup auth
 	if c.config.Auth.User != "" {
 		req.Header.Set("X-ClickHouse-User", c.config.Auth.User)

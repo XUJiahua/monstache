@@ -10,9 +10,15 @@ import (
 func TestClient_BatchInsert(t *testing.T) {
 	data, err := os.ReadFile("messages.json")
 	require.NoError(t, err)
-	var rows []interface{}
-	err = json.Unmarshal(data, &rows)
+	var twoRows []interface{}
+	err = json.Unmarshal(data, &twoRows)
 	require.NoError(t, err)
+
+	var rows []interface{}
+	// try 20 objects in one call
+	for i := 0; i < 10; i++ {
+		rows = append(rows, twoRows...)
+	}
 
 	client := NewClient(ClickHouseConfig{
 		Endpoint:           "http://10.30.11.112:8123/",
