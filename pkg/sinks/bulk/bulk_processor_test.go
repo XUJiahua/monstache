@@ -14,17 +14,17 @@ import (
 
 type MockRequest struct{}
 
-func (m MockRequest) GetTopic() string {
+func (m MockRequest) GetNamespace() string {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m MockRequest) GetKey() []byte {
+func (m MockRequest) GetId() interface{} {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m MockRequest) GetValue() []byte {
+func (m MockRequest) GetDoc() interface{} {
 	//TODO implement me
 	panic("implement me")
 }

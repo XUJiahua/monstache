@@ -11,10 +11,12 @@ import (
 	"time"
 )
 
+// BulkableRequest it's sinker's own to convert to their format
 type BulkableRequest interface {
-	GetTopic() string
-	GetKey() []byte
-	GetValue() []byte
+	// GetNamespace op namespace
+	GetNamespace() string
+	GetId() interface{}
+	GetDoc() interface{}
 }
 
 type Client interface {
