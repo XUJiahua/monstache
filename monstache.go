@@ -2505,6 +2505,7 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
 		config.OpTimeFieldName = tomlConfig.OpTimeFieldName
 		config.KafkaBrokers = tomlConfig.KafkaBrokers
+		config.ClickHouseConfig = tomlConfig.ClickHouseConfig
 		config.KafkaTopicPrefix = tomlConfig.KafkaTopicPrefix
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
@@ -5481,6 +5482,7 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 	}
 
 	if config.ClickHouseSink {
+		logrus.Infof("clickhouse: %v", config.ClickHouseConfig)
 		client := clickhouse.NewClient(config.ClickHouseConfig)
 		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
