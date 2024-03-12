@@ -18,12 +18,16 @@ type ClickHouseConfig struct {
 	SkipUnknownFields bool
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
 	DateTimeBestEffort bool
-	// todo: support basic auth
-	Auth Auth
+	Auth               Auth
 }
 
+// Auth
+// support basic auth
+// https://clickhouse.com/docs/en/interfaces/http#default-database
 type Auth struct {
-	User     string
+	// If the user name is not specified, the default name is used.
+	User string
+	// If the password is not specified, the empty password is used.
 	Password string
 }
 
@@ -64,6 +68,7 @@ func (c Client) BatchInsert(database, table string, rows []interface{}) error {
 	finalURL := u.String()
 	logrus.Debugf("request URL: %s", finalURL)
 
+	// todo: compression
 	var buf bytes.Buffer
 	for _, user := range rows {
 		jsonData, err := json.Marshal(user)
@@ -77,7 +82,14 @@ func (c Client) BatchInsert(database, table string, rows []interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to build request")
 	}
-	//req.Header.Set("Content-Type", "application/json")
+	// setup auth
+	if c.config.Auth.User != "" {
+		req.Header.Set("X-ClickHouse-User", c.config.Auth.User)
+	}
+	if c.config.Auth.Password != "" {
+		req.Header.Set("X-ClickHouse-Key", c.config.Auth.Password)
+	}
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to post request to clickhouse")
