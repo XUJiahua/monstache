@@ -5462,7 +5462,7 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		sink, err := kafka.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName, config.KafkaTopicPrefix)
+		sink, err := kafka.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
