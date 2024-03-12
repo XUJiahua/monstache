@@ -12,6 +12,7 @@ type Sink struct {
 	virtualDeleteFieldName string
 	opTimeFieldName        string
 	bulkProcessor          *bulk.BulkProcessor
+	updateTimeFieldName    string
 }
 
 func (s *Sink) Flush() error {
@@ -36,11 +37,10 @@ func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldNam
 		opTimeFieldName = "__op_time"
 	}
 
-	// fixme: __update_time derived from updateTime
-
 	sink := &Sink{
 		virtualDeleteFieldName: virtualDeleteFieldName,
 		opTimeFieldName:        opTimeFieldName,
+		updateTimeFieldName:    "__update_time",
 		bulkProcessor:          bulkProcessor,
 	}
 
@@ -54,6 +54,17 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	if op.IsSourceOplog() && s.opTimeFieldName != "" {
 		// add new column op_time for tracing/debugging
 		op.Data[s.opTimeFieldName] = op.Timestamp.T
+	}
+	// __update_time derived from updateTime
+	if s.updateTimeFieldName != "" {
+		// make it configurable
+		if updateTime, ok := op.Data["updateTime"]; ok {
+			if tStr, ok := updateTime.(string); ok {
+				if t, ok := parseTime(tStr); ok {
+					op.Data[s.updateTimeFieldName] = t
+				}
+			}
+		}
 	}
 
 	request := Request{
