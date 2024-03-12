@@ -63,6 +63,8 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 				if t, ok := parseTime(tStr); ok {
 					op.Data[s.updateTimeFieldName] = t
 				}
+			} else if t, ok := updateTime.(time.Time); ok {
+				op.Data[s.updateTimeFieldName] = t.UnixMilli()
 			}
 		}
 	}
