@@ -2,29 +2,27 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"github.com/rwynn/gtm/v2"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"time"
 )
 
 type Request struct {
-	topic string
-	key   []byte
-	value []byte
+	namespace string
+	id        interface{}
+	doc       interface{}
 }
 
-func (r Request) GetTopic() string {
-	return r.topic
+func (r Request) GetNamespace() string {
+	return r.namespace
 }
 
-func (r Request) GetKey() []byte {
-	return r.key
+func (r Request) GetId() interface{} {
+	return r.id
 }
 
-func (r Request) GetValue() []byte {
-	return r.value
+func (r Request) GetDoc() interface{} {
+	return r.doc
 }
 
 type Sink struct {
@@ -77,17 +75,11 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 		// add new column op_time for tracing/debugging
 		op.Data[s.opTimeFieldName] = op.Timestamp.T
 	}
-	byteData, err := json.Marshal(op.Data)
-	if err != nil {
-		return err
-	}
-	topic := fmt.Sprintf("%s%s", s.topicPrefix, op.Namespace)
-	key := fmt.Sprintf("%v", op.Id)
 
 	request := Request{
-		topic: topic,
-		key:   []byte(key),
-		value: byteData,
+		namespace: op.Namespace,
+		id:        op.Id,
+		doc:       op.Data,
 	}
 	s.bulkProcessor.Add(request)
 

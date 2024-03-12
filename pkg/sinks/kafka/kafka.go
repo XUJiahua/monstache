@@ -2,6 +2,8 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/segmentio/kafka-go"
@@ -15,12 +17,19 @@ type KafkaProducer struct {
 }
 
 func (k KafkaProducer) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
+	topicPrefix := "monstache."
+
 	messages := make([]kafka.Message, len(requests))
 	for i, request := range requests {
+		byteData, err := json.Marshal(request.GetDoc())
+		if err != nil {
+			return err
+		}
+		key := fmt.Sprintf("%v", request.GetId())
 		message := kafka.Message{
-			Topic: request.GetTopic(),
-			Key:   request.GetKey(),
-			Value: request.GetValue(),
+			Topic: topicPrefix + request.GetNamespace(),
+			Key:   []byte(key),
+			Value: byteData,
 		}
 		messages[i] = message
 	}

@@ -73,9 +73,9 @@ func getInstance(t *testing.T) *KafkaProducer {
 func TestKafkaProducer_Commit(t *testing.T) {
 	p := getInstance(t)
 	err := p.Commit(context.TODO(), []bulk.BulkableRequest{Request{
-		topic: "monstache.db1.col1",
-		key:   []byte("a"),
-		value: []byte("a"),
+		namespace: "db1.col1",
+		id:        "a",
+		doc:       "a",
 	}})
 	require.NoError(t, err)
 }
