@@ -1,6 +1,7 @@
 package clickhouse
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -29,6 +30,6 @@ func TestClient_BatchInsert(t *testing.T) {
 			Password: "",
 		},
 	})
-	err = client.BatchInsert("evocloud", "settle_evo_trans", rows)
+	err = client.BatchInsert(context.TODO(), "evocloud", "settle_evo_trans", rows)
 	require.NoError(t, err)
 }

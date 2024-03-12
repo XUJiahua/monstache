@@ -3,9 +3,11 @@ package clickhouse
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -20,6 +22,13 @@ type ClickHouseConfig struct {
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
 	DateTimeBestEffort bool
 	Auth               Auth
+	// mongodb op namespace (database.collection) -> clickhouse namespace (database.table)
+	Sinks map[string]Namespace
+}
+
+type Namespace struct {
+	Database string
+	Table    string
 }
 
 // Auth
@@ -37,6 +46,28 @@ type Client struct {
 	config     ClickHouseConfig
 }
 
+func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
+	docsByNS := make(map[string][]interface{})
+	for _, request := range requests {
+		ns := request.GetNamespace()
+		if docs, ok := docsByNS[ns]; ok {
+			docsByNS[ns] = append(docs, request.GetDoc())
+		} else {
+			docsByNS[ns] = []interface{}{request.GetDoc()}
+		}
+	}
+	for ns, docs := range docsByNS {
+		if target, ok := c.config.Sinks[ns]; ok {
+			if err := c.BatchInsert(ctx, target.Database, target.Table, docs); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("clickhouse sink is not properly set for namespace %s", ns)
+		}
+	}
+	return nil
+}
+
 func NewClient(config ClickHouseConfig) *Client {
 	return &Client{
 		// fixme: a better settings
@@ -47,7 +78,7 @@ func NewClient(config ClickHouseConfig) *Client {
 
 // BatchInsert
 // https://clickhouse.com/docs/en/faq/integration/json-import
-func (c Client) BatchInsert(database, table string, rows []interface{}) error {
+func (c Client) BatchInsert(ctx context.Context, database, table string, rows []interface{}) error {
 	// build request
 	u, err := url.Parse(c.config.Endpoint)
 	if err != nil {
@@ -91,7 +122,7 @@ func (c Client) BatchInsert(database, table string, rows []interface{}) error {
 		return errors.Wrap(err, "Error closing GZIP writer")
 	}
 
-	req, err := http.NewRequest("POST", finalURL, &buf)
+	req, err := http.NewRequestWithContext(ctx, "POST", finalURL, &buf)
 	if err != nil {
 		return errors.Wrap(err, "failed to build request")
 	}
