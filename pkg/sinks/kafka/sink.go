@@ -28,7 +28,6 @@ func (r Request) GetDoc() interface{} {
 type Sink struct {
 	virtualDeleteFieldName string
 	opTimeFieldName        string
-	topicPrefix            string
 	bulkProcessor          *bulk.BulkProcessor
 }
 
@@ -36,7 +35,7 @@ func (s *Sink) Flush() error {
 	return s.bulkProcessor.Flush()
 }
 
-func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldName, opTimeFieldName, topicPrefix string) (*Sink, error) {
+func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldName, opTimeFieldName string) (*Sink, error) {
 	bulkProcessorService := bulk.NewBulkProcessorService(client)
 	bulkProcessorService.Workers(1)
 	bulkProcessorService.BulkActions(1000)
@@ -53,13 +52,9 @@ func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, virtualDeleteFieldNam
 	if opTimeFieldName == "" {
 		opTimeFieldName = "__op_time"
 	}
-	if topicPrefix == "" {
-		topicPrefix = "monstache."
-	}
 
 	sink := &Sink{
 		virtualDeleteFieldName: virtualDeleteFieldName,
-		topicPrefix:            topicPrefix,
 		opTimeFieldName:        opTimeFieldName,
 		bulkProcessor:          bulkProcessor,
 	}
