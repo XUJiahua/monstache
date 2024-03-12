@@ -16,19 +16,19 @@ import (
 
 type ClickHouseConfig struct {
 	// example: http://localhost:8123
-	Endpoint string
+	Endpoint string `toml:"endpoint"`
 	// Sets `input_format_skip_unknown_fields`, allowing ClickHouse to discard fields not present in the table schema.
-	SkipUnknownFields bool
+	SkipUnknownFields bool `toml:"skip_unknown_fields"`
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
-	DateTimeBestEffort bool
-	Auth               Auth
+	DateTimeBestEffort bool `toml:"date_time_best_effort"`
+	Auth               Auth `toml:"auth"`
 	// mongodb op namespace (database.collection) -> clickhouse namespace (database.table)
-	Sinks map[string]Namespace
+	Sinks map[string]Namespace `toml:"sinks"`
 }
 
 type Namespace struct {
-	Database string
-	Table    string
+	Database string `toml:"database"`
+	Table    string `toml:"table"`
 }
 
 // Auth

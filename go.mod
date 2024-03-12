@@ -3,7 +3,7 @@ module github.com/rwynn/monstache/v6
 //replace github.com/rwynn/gtm/v2 => ../gtm
 
 require (
-	github.com/BurntSushi/toml v1.2.1
+	github.com/BurntSushi/toml v1.3.2
 	github.com/aws/aws-sdk-go v1.44.239
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf

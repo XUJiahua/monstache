@@ -459,11 +459,11 @@ type configOptions struct {
 	FileSink                    bool
 	KafkaSink                   bool
 	ClickHouseSink              bool
-	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
-	OpTimeFieldName             string `toml:"op-time-field-name"`
-	KafkaBrokers                string `toml:"kafka-brokers"`
-	KafkaTopicPrefix            string `toml:"kafka-topic-prefix"`
-	ClickHouseConfig            *clickhouse.ClickHouseConfig
+	VirtualDeleteFieldName      string                      `toml:"virtual-delete-field-name"`
+	OpTimeFieldName             string                      `toml:"op-time-field-name"`
+	KafkaBrokers                string                      `toml:"kafka-brokers"`
+	KafkaTopicPrefix            string                      `toml:"kafka-topic-prefix"`
+	ClickHouseConfig            clickhouse.ClickHouseConfig `toml:"clickhouse"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -5466,12 +5466,12 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 			errorLog.Printf(s, i...)
 		})
 		if err != nil {
-			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+			errorLog.Fatalf("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
 		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
-			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+			errorLog.Fatalf("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
 		// sink will close client internally
@@ -5481,13 +5481,10 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 	}
 
 	if config.ClickHouseSink {
-		if config.ClickHouseConfig == nil {
-			errorLog.Fatalln("ClickHouseConfig is configured")
-		}
-		client := clickhouse.NewClient(*config.ClickHouseConfig)
+		client := clickhouse.NewClient(config.ClickHouseConfig)
 		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
-			errorLog.Fatalln("Unable to connect to clickhouse %v, %v", config.ClickHouseConfig, err)
+			errorLog.Fatalf("Unable to connect to clickhouse %v, %v", config.ClickHouseConfig, err)
 		}
 
 		// sink will close producer internally
