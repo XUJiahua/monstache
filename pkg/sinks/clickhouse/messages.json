@@ -1,0 +1,669 @@
+[
+  {
+    "_id": "65abee0193dac3547664e888",
+    "authentication": {
+      "authpassword": ""
+    },
+    "binInfo": {
+      "cardClass": "0",
+      "countryCode": "HKG",
+      "creditFlag": "credit",
+      "creditFlagOrig": "C",
+      "currency": "HKD",
+      "issuerArea": "4",
+      "issuerIIC": "496604",
+      "nsIndicator": "Y",
+      "productType": "C"
+    },
+    "cardOrderInfo": {
+      "batchTime": "2024-01-20T16:00:01.199Z",
+      "posEntryMode": "EC"
+    },
+    "createTime": "2024-01-20T16:00:01.187Z",
+    "evoTransInfo": {
+      "businessCode": "CAPTURE",
+      "evoTransID": "HKGa6b685a414c54ab78d26da3577bf4e15",
+      "evoTransTime": "2024-01-20T16:00:01.187Z",
+      "preBoundName": "PRE_In_Gateway",
+      "traceNum": "610829"
+    },
+    "isAuthentication": true,
+    "is_deleted": 0,
+    "lockFlag": 1,
+    "merchantTransInfo": {
+      "merchantTransID": "92024012100000195448568",
+      "merchantTransTime": "2024-01-21T00:00:01+08:00"
+    },
+    "orderInfo": {
+      "acqSettAmount": {},
+      "actualPayAmount": {},
+      "adjustAmount": {},
+      "billingAmount": {},
+      "bizTuition": {},
+      "captureAmount": {},
+      "captureLocalAmount": {},
+      "category": "ec",
+      "clearFlag": true,
+      "conversionCurrencyAmount": {},
+      "conversionCurrencyRefundAmount": {},
+      "conversionExchangeRate": {},
+      "dccBillingAmount": {},
+      "fsmLog": [
+        {
+          "from": "Created",
+          "name": "Pending",
+          "time": "2024-01-20T16:00:01.197Z",
+          "to": "Pending",
+          "traceID": "EjmPyPS02xbO5HoPANFgHiMVCaNgh6JOd7KRA1mg"
+        },
+        {
+          "from": "Pending",
+          "name": "Success",
+          "time": "2024-01-20T16:00:01.199Z",
+          "to": "Success",
+          "traceID": "EjmPyPS02xbO5HoPANFgHiMVCaNgh6JOd7KRA1mg"
+        }
+      ],
+      "gwID": "HKG",
+      "interchangeFee": {},
+      "isNetworkToken": false,
+      "localAmount": {},
+      "payTime": "2024-01-20T16:00:01.187Z",
+      "paymentAmount": {},
+      "priceAmount": {},
+      "procFlag": "0",
+      "pspMethodType": "Capture",
+      "pspRefundAmount": {},
+      "pspSettAmount": {},
+      "pspTransAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 82297,
+        "number": "156",
+        "value": "822.97"
+      },
+      "realRefundAmount": {},
+      "refundAmount": {},
+      "refundUpdateAmount": {},
+      "revFlag": "0",
+      "sourceTransID": "469df2743652452aab67c859858405b3",
+      "status": "Success",
+      "statuss": [
+        "Pending",
+        "Success",
+        "Authorised"
+      ],
+      "storeRefundSettAmount": {},
+      "storeSettAmount": {},
+      "surchargeFee": {},
+      "tipAmount": {},
+      "transAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 82297,
+        "number": "156",
+        "value": "822.97"
+      },
+      "transType": 1,
+      "vatAmount": {},
+      "withoutGWToken": false
+    },
+    "origCardOrderInfo": {
+      "posEntryMode": "EC"
+    },
+    "origEvoTransInfo": {
+      "businessCode": "PAYMENT",
+      "endPointName": "EC_PSP_Visa_authorise",
+      "evoTransID": "469df2743652452aab67c859858405b3",
+      "evoTransTime": "2024-01-20T16:00:00.519Z",
+      "outBoundName": "EC_PSP_Visa",
+      "preBoundName": "PRE_In_Gateway",
+      "retrievalReferenceNum": "402100064286",
+      "traceNum": "064286"
+    },
+    "origMerchantTransInfo": {
+      "merchantTransID": "742401213093502073542",
+      "merchantTransTime": "2024-01-21T00:00:00+08:00",
+      "preRespCodeMapVersion": "sysCode"
+    },
+    "origOrderInfo": {
+      "billingAmount": {},
+      "captureAfterHours": 0,
+      "transAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 82297,
+        "number": "156",
+        "value": "822.97"
+      }
+    },
+    "origPspTransInfo": {
+      "msgID": "Q40597620240121000000064286",
+      "pspTraceNum": "064286",
+      "pspTraceTime": "0121000000",
+      "retrievalReferenceNum": "402100064286"
+    },
+    "paymentMethod": {
+      "bankTransfer": {},
+      "buyNowPayLater": {},
+      "card": {
+        "cardClass": "0",
+        "cardExpDate": "2708",
+        "cardNumberC": "de610c15fd1ed52dd3a56bea67bd6bab38ce7199aabff048f28180b15cb93926",
+        "creditFlag": "2",
+        "creditFlagOrig": "C",
+        "displayNumber": "496604******7292",
+        "encryptedcardinfo": "",
+        "expiryMonth": "08",
+        "expiryYear": "27",
+        "first6No": "496604",
+        "fundingType": "credit",
+        "hash": "cf779754a343915deaddcd941fabb780",
+        "issuingCountry": "344",
+        "keyserialnumber": "",
+        "last4No": "7292"
+      },
+      "carrierBilling": {},
+      "cash": {},
+      "eWalletInfo": {
+        "consumeraccount": "",
+        "consumerid": ""
+      },
+      "googlePay": {
+        "encryptedDataInfo": {
+          "paymentMethodDetails": {
+            "assuranceDetails": {}
+          }
+        }
+      },
+      "isSubsequentTxn": true,
+      "networkToken": {
+        "networkTokenOnly": false,
+        "supportDeviceBinding": false
+      },
+      "onlineBanking": {},
+      "paymentBrand": "VIS",
+      "paymentMethodVariant": "COF",
+      "prepaidCard": {},
+      "recurringProcessingModel": "COF",
+      "token": {},
+      "type": "card"
+    },
+    "pspData": {
+      "name": "VIS"
+    },
+    "pspInfo": {
+      "allowUnbinding": false,
+      "businessID": "10061740",
+      "chanCode": "VIS",
+      "city": "ShenZhen",
+      "clearingBIN": "405976",
+      "countryCode": "CHN",
+      "issupporttraffic": false,
+      "mcc": "5999",
+      "merchantEmail": "518000",
+      "merchantID": "121635420100000",
+      "merchantName": "WECHAT*TENCENT",
+      "merchantSecretKeyC": "",
+      "merchantTelephone": "518000",
+      "mode": "dual",
+      "name": "Visa",
+      "nation": "CHN",
+      "origin": "BEA",
+      "paymentFacilitator": "10073389",
+      "postCode": "518000",
+      "sponsorCode": "405976",
+      "stationId": "121864",
+      "street": "Tencent Building 10000 Shennan Avenue",
+      "version": "Bankcard"
+    },
+    "pspTransInfo": {
+      "msgID": "Q40597620240121000001",
+      "pspTraceTime": "0121000000"
+    },
+    "result": {
+      "code": "S0000",
+      "message": "Success"
+    },
+    "settDate": "2024-01-21",
+    "storeInfo": {
+      "insCode": "96951900",
+      "insName": "财付通",
+      "insNameEN": "WeChatpay*Tencent",
+      "mcc": "5999",
+      "mccConfig": {},
+      "visaConfig": {}
+    },
+    "sysDate": "20240121",
+    "transInitiator": {
+      "apiMode": "acq",
+      "apiVer": "v0",
+      "platform": "WEB"
+    },
+    "updateTime": "2024-01-20T16:00:01.199Z"
+  },
+  {
+    "_id": "65abee0193dac3547664e889",
+    "authentication": {
+      "authpassword": ""
+    },
+    "binInfo": {
+      "cardClass": "0",
+      "countryCode": "KAZ",
+      "creditFlag": "debit",
+      "creditFlagOrig": "D",
+      "currency": "USD",
+      "issuerArea": "6",
+      "issuerIIC": "440043",
+      "nsIndicator": "Y",
+      "productType": "N1"
+    },
+    "cardOrderInfo": {
+      "posEntryMode": "EC",
+      "retrievalReferenceNum": "402100064326"
+    },
+    "createTime": "2024-01-20T16:00:01.852Z",
+    "evoTransInfo": {
+      "businessCode": "PAYMENT",
+      "endPointName": "EC_PSP_Visa_authorise",
+      "evoTransID": "87c3aac570844da8aa3cb9845053f7d3",
+      "evoTransTime": "2024-01-20T16:00:01.362Z",
+      "outBoundName": "EC_PSP_Visa",
+      "preBoundName": "PRE_In_ECMer_V1",
+      "retrievalReferenceNum": "402100064326",
+      "traceNum": "064326"
+    },
+    "isAuthentication": true,
+    "is_deleted": 0,
+    "lockFlag": 0,
+    "merchantTransInfo": {
+      "merchantTransID": "B2024012110000655234300000000883",
+      "merchantTransTime": "2024-01-21T00:00:01+08:00",
+      "preRespCodeMapVersion": "ecV1",
+      "signType": "SHA256"
+    },
+    "orderInfo": {
+      "acqSettAmount": {},
+      "actualPayAmount": {},
+      "adjustAmount": {},
+      "billingAmount": {},
+      "bizTuition": {},
+      "captureAfterHours": 0,
+      "captureAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 1390,
+        "number": "156",
+        "value": "13.90"
+      },
+      "captureLocalAmount": {},
+      "captureOrderNums": [
+        "B2024012110000655234300000000883",
+        "92024012100000234577776"
+      ],
+      "captureTime": "2024-01-20T16:00:02.66Z",
+      "category": "ec",
+      "conversionCurrencyAmount": {},
+      "conversionCurrencyRefundAmount": {},
+      "conversionExchangeRate": {},
+      "dccBillingAmount": {},
+      "fsmLog": [
+        {
+          "from": "Created",
+          "name": "CardPayment",
+          "time": "2024-01-20T16:00:02.638Z",
+          "to": "Pending",
+          "traceID": "Ejl8VrcV-UzD2gWAc1aw3svaPYvaKpZJVcgjQaUT"
+        },
+        {
+          "from": "Pending",
+          "name": "CardPayment",
+          "time": "2024-01-20T16:00:02.643Z",
+          "to": "Authorised",
+          "traceID": "Ejl8VrcV-UzD2gWAc1aw3svaPYvaKpZJVcgjQaUT"
+        },
+        {
+          "from": "Authorised",
+          "name": "Capturing",
+          "time": "2024-01-20T16:00:02.646Z",
+          "to": "Capturing",
+          "traceID": "Ejl8VrcV-UzD2gWAc1aw3svaPYvaKpZJVcgjQaUT"
+        },
+        {
+          "from": "Capturing",
+          "name": "Captured",
+          "time": "2024-01-20T16:00:02.66Z",
+          "to": "Captured",
+          "traceID": "Ejl8VrcV-UzD2gWAc1aw3svaPYvaKpZJVcgjQaUT"
+        }
+      ],
+      "gwID": "HKG",
+      "interchangeFee": {},
+      "isNetworkToken": true,
+      "localAmount": {},
+      "payTime": "2024-01-20T16:00:01Z",
+      "paymentAmount": {},
+      "paymentProduct": "Open API",
+      "priceAmount": {},
+      "procFlag": "0",
+      "pspMethodType": "authorise",
+      "pspRefundAmount": {},
+      "pspSettAmount": {},
+      "pspTransAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 1390,
+        "number": "156",
+        "value": "13.90"
+      },
+      "realRefundAmount": {},
+      "refundAmount": {},
+      "refundUpdateAmount": {},
+      "revFlag": "F",
+      "sourceTransID": "87c3aac570844da8aa3cb9845053f7d3",
+      "status": "Captured",
+      "statuss": [
+        "Pending",
+        "Authorised",
+        "Capturing",
+        "Captured"
+      ],
+      "storeRefundSettAmount": {},
+      "storeSettAmount": {},
+      "surchargeFee": {},
+      "tipAmount": {},
+      "transAmount": {
+        "currency": "CNY",
+        "exponent": 2,
+        "intValue": 1390,
+        "number": "156",
+        "value": "13.90"
+      },
+      "transType": 1,
+      "vatAmount": {},
+      "webHook": "https://channel.pinduoduo.com/api/lanus/callback/bea/S201109",
+      "withoutGWToken": false
+    },
+    "origCardOrderInfo": {},
+    "origOrderInfo": {
+      "billingAmount": {},
+      "transAmount": {}
+    },
+    "origPspTransInfo": {
+      "pointOfServiceInfo": "010000000740"
+    },
+    "paymentMethod": {
+      "bankTransfer": {},
+      "buyNowPayLater": {},
+      "card": {
+        "cardClass": "0",
+        "cardExpDate": "2606",
+        "cardNumberC": "7c3204e2a236ef97ba979144296d96345fd81c263dc4e3e875017999dbb3eae9",
+        "creditFlag": "1",
+        "creditFlagOrig": "D",
+        "displayNumber": "440043******7075",
+        "encryptedcardinfo": "",
+        "expiryDate": "0626",
+        "expiryMonth": "06",
+        "expiryYear": "26",
+        "first6No": "440043",
+        "fundingType": "debit",
+        "hash": "e23c4ec605c62670de1a99910f71b162",
+        "issuingCountry": "398",
+        "keyserialnumber": "",
+        "last4No": "7075"
+      },
+      "carrierBilling": {},
+      "cash": {},
+      "eWalletInfo": {
+        "consumeraccount": "",
+        "consumerid": ""
+      },
+      "googlePay": {
+        "encryptedDataInfo": {
+          "paymentMethodDetails": {
+            "assuranceDetails": {}
+          }
+        }
+      },
+      "networkToken": {
+        "networkTokenOnly": false,
+        "status": "enabled",
+        "supportDeviceBinding": true,
+        "tokenID": "710ad3e10b1839df8aa41982e8c46901"
+      },
+      "onlineBanking": {},
+      "paymentBrand": "VIS",
+      "prepaidCard": {},
+      "token": {
+        "createTime": "2023-12-13T19:25:09Z",
+        "expiryDate": "2606",
+        "first6No": "427647",
+        "last4No": "9111",
+        "pspToken": "4276473495649111",
+        "status": "disabled",
+        "tokenCryptogram": "/wAAAAACCpnRoVLBc6/HQBQAAAA=",
+        "type": "networkToken",
+        "updateTime": "2023-12-13T19:25:10Z",
+        "value": "pmt_5f83a14969774e9992f8518e53eb9831"
+      },
+      "type": "card"
+    },
+    "pspData": {
+      "name": "VIS"
+    },
+    "pspInfo": {
+      "allowUnbinding": false,
+      "businessID": "10061740",
+      "chanCode": "VIS",
+      "city": "ShangHai",
+      "clearingBIN": "402657",
+      "countryCode": "CHN",
+      "issupporttraffic": false,
+      "mcc": "5399",
+      "mccNameEn": "Miscellaneous General Merchandise",
+      "merchantID": "A01345953990005",
+      "merchantName": "PINDUODUO",
+      "merchantSecretKeyC": "",
+      "merchantShortName": "PINDUODUO",
+      "mode": "dual",
+      "name": "Visa",
+      "nation": "CHN",
+      "postCode": "200000",
+      "sponsorCode": "402657",
+      "stationId": "121864",
+      "storeName": "PINDUODUO",
+      "street": "Room 2902-2913 No. 533 Loushanguan Road Changning District Shangh",
+      "terminalID": "123456",
+      "version": "Bankcard"
+    },
+    "pspTransInfo": {
+      "additionalResponseData": "V 1       P   2",
+      "additionalTokenRespInfo": "1",
+      "authorizationCode": "548297",
+      "cvcCheckResult": "P",
+      "cvcCheckResultRaw": "P",
+      "msgID": "Q40265720240121000001064326",
+      "msgType": "0100",
+      "pointOfSerDataCode": "59",
+      "pointOfSerEntryCode": "100",
+      "pointOfServiceInfo": "010000000740",
+      "processCode": "000000",
+      "pspTraceNum": "064326",
+      "pspTraceTime": "0121000001",
+      "pspTransID": "464020576029424",
+      "pspTransTime": "2024-01-21T00:00:01+08:00",
+      "retrievalReferenceNum": "402100064326",
+      "transactionIdentifier": "0464020576029424"
+    },
+    "result": {
+      "code": "S0000",
+      "message": "Success",
+      "preCode": "S0000",
+      "preMessage": "Success",
+      "pspCode": "00",
+      "pspMessage": "Successful approval/completion or V .I.P .PIN\n verification is successful"
+    },
+    "riskInfo": {
+      "risk": {
+        "accountcreationdate": "",
+        "accountverified": false,
+        "acctType": "debit",
+        "acquirerCountryCode": "CHN",
+        "acquirerID": "90221900",
+        "allowAuthentication": "False",
+        "allowRaaS": true,
+        "authenticationType": "",
+        "authenticationmethod": "",
+        "authorizationcode": "548297",
+        "captureAfterHours": "0",
+        "cardClass": "0",
+        "cardNumber": "440043****7075",
+        "cardholderauthenticated": false,
+        "cavvresult": "",
+        "consumeraccount": "",
+        "consumerid": "",
+        "cvcAvailable": true,
+        "cvcCheckResult": "P",
+        "cvcCheckResultRaw": "P",
+        "evocloudtransactionid": "87c3aac570844da8aa3cb9845053f7d3",
+        "expiryDate": "2606",
+        "feeprogramindicator": "",
+        "goodsdescription": "",
+        "goodsname": "",
+        "groupID": "A013459",
+        "isSubsequentTxn": false,
+        "issuerCountryCoder": "KAZ",
+        "issuerarea": "6",
+        "issuercountry": "",
+        "issuername": "",
+        "issuingCountry": "398",
+        "javascriptenabled": false,
+        "mastercardrating": "",
+        "mcc": "5399",
+        "merchantID": "M177474",
+        "merchantTransID": "B2024012110000655234300000000883",
+        "merchantfraudserviceflag": "",
+        "merchantname": "PINDUODUO",
+        "merchantorderreference": "",
+        "merchantverificationvalue": "",
+        "metadata": "",
+        "mobilecountrycode": "",
+        "mobilesubscribersections": "",
+        "mode": "Notification",
+        "opeID": "PostAuth",
+        "origTransStatus": "n/a",
+        "origTransTime": "2024-01-20T16:00:01Z",
+        "originalMerchantTransID": "B2024012110000655234300000000883",
+        "originalTransType": "Payment",
+        "outboundname": "EC_PSP_Visa",
+        "passwordchangedate": "",
+        "paymentBrand": "Visa",
+        "paymentMethod": "card",
+        "paymentfacilitator": "",
+        "paymentproduct": "",
+        "platform": "APP",
+        "preboundname": "PRE_In_ECMer_V1",
+        "producttype": "N1",
+        "psp": "Visa",
+        "pspMessage": "Successful approval/completion or V .I.P .PIN\n verification is successful",
+        "pspResponseCode": "00",
+        "recipientcity": "",
+        "recipientcountry": "",
+        "recipientfirstname": "",
+        "recipientlastname": "",
+        "recipientstateorprovince": "",
+        "recipientstreet": "",
+        "responseMessage": "Success",
+        "resultCode": "S0000",
+        "resultaction": "",
+        "returnurl": "",
+        "riskResponse": [
+          {
+            "code": "200",
+            "finalresult": "Pass",
+            "message": "success",
+            "requestid": "B2024012110000655234300000000883",
+            "rulecode": "",
+            "rulecodemessage": "",
+            "traceid": "bb1d988f-c1cb-45df-85ce-a87566f5b547",
+            "verifyaction": ""
+          }
+        ],
+        "scaCardScheme": "Visa",
+        "spec": "",
+        "sponsorcode": "402657",
+        "statusreason": "",
+        "storeCountry": "CHN",
+        "storeID": "A01345953990005",
+        "storename": "PINDUODUO",
+        "threeDSPreference": "Option",
+        "threedsversion": "",
+        "tokenValue": "pmt_5f83a14969774e9992f8518e53eb9831",
+        "tokenize": false,
+        "tokentype": "networkToken",
+        "totalquantity": "",
+        "tradetype": "",
+        "transAmountCurrency": "CNY",
+        "transAmountValue": 13.9,
+        "transScenario": "EC",
+        "transStatus": "Success",
+        "transTime": "2024-01-20T16:00:01Z",
+        "transType": "Payment",
+        "transactioncategorycode": "",
+        "type": "Notification",
+        "typeCategory": "EC",
+        "usercreateip": "",
+        "userinforeference": "",
+        "walletidentifiers": ""
+      },
+      "risklog": [
+        {
+          "opId": "PreAuth",
+          "sendTime": "2024-01-21T00:00:01+08:00"
+        },
+        {
+          "opId": "PostAuth",
+          "sendTime": "2024-01-21T00:00:02+08:00"
+        }
+      ]
+    },
+    "settDate": "2024-01-21",
+    "storeInfo": {
+      "agentCode": "A013459",
+      "agentName": "拼多多(集团）",
+      "agentNameEN": "PINDUODUO Group ",
+      "insCode": "90221900",
+      "insName": "东亚银行（中国）有限公司",
+      "insNameEN": "The Bank of East Asia",
+      "intMerCode": "M177474",
+      "intStoreCode": "S201109",
+      "mcc": "5399",
+      "mccConfig": {},
+      "mccNameEN": "Miscellaneous General Merchandise",
+      "merName": "拼多多(商户)",
+      "merNameEN": "PINDUODUO Merchant",
+      "merNum": "M177474",
+      "nation": "CHN",
+      "pspTRID": "40010089629",
+      "storeAddr": "Room 2902-2913 No. 533 Loushanguan Road Changning District Shangh",
+      "storeAddrEn": "Room 2902-2913 No. 533 Loushanguan Road Changning District Shangh",
+      "storeCity": "ShangHai",
+      "storeCityEn": "ShangHai",
+      "storeName": "PINDUODUO",
+      "storeNameEn": "PINDUODUO",
+      "storeNum": "A01345953990005",
+      "storePostCode": "200000",
+      "storeReferURL": "https://www.pinduoduo.com/",
+      "visaConfig": {}
+    },
+    "sysDate": "20240121",
+    "transInitiator": {
+      "apiMode": "mer",
+      "apiVer": "v1",
+      "paymentScenario": "EC",
+      "platform": "APP"
+    },
+    "updateTime": "2024-01-20T16:01:32.923Z"
+  }
+]
