@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse"
 	"github.com/rwynn/monstache/v6/pkg/sinks/common"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
@@ -457,10 +458,12 @@ type configOptions struct {
 	ConsoleSink                 bool
 	FileSink                    bool
 	KafkaSink                   bool
+	ClickHouseSink              bool
 	VirtualDeleteFieldName      string `toml:"virtual-delete-field-name"`
 	OpTimeFieldName             string `toml:"op-time-field-name"`
 	KafkaBrokers                string `toml:"kafka-brokers"`
 	KafkaTopicPrefix            string `toml:"kafka-topic-prefix"`
+	ClickHouseConfig            *clickhouse.ClickHouseConfig
 }
 
 type ElasticAPIKeyTransport struct {
@@ -1914,6 +1917,7 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	flag.BoolVar(&config.ConsoleSink, "console", false, "True to enable console print op log")
 	flag.BoolVar(&config.FileSink, "file", false, "True to enable file sink")
 	flag.BoolVar(&config.KafkaSink, "kafka", false, "True to enable kafka sink")
+	flag.BoolVar(&config.ClickHouseSink, "clickhouse", false, "True to enable clickhouse sink")
 	flag.Parse()
 	return config
 }
@@ -5444,6 +5448,8 @@ type Closer interface {
 
 func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (SinkConnector, []Closer) {
 	var closers []Closer
+
+	// fixme: refactor console and file sink using common sink + commit client
 	if config.ConsoleSink {
 		return &console.Sink{}, closers
 	}
@@ -5454,7 +5460,7 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 	}
 
 	if config.KafkaSink {
-		producer, err := kafka.NewKafkaProducer(config.KafkaBrokers, func(s string, i ...interface{}) {
+		client, err := kafka.NewKafkaProducer(config.KafkaBrokers, func(s string, i ...interface{}) {
 			traceLog.Printf(s, i...)
 		}, func(s string, i ...interface{}) {
 			errorLog.Printf(s, i...)
@@ -5463,9 +5469,25 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		sink, err := common.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
+		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
+		}
+
+		// sink will close client internally
+		closers = append(closers, sink)
+
+		return sink, closers
+	}
+
+	if config.ClickHouseSink {
+		if config.ClickHouseConfig == nil {
+			errorLog.Fatalln("ClickHouseConfig is configured")
+		}
+		client := clickhouse.NewClient(*config.ClickHouseConfig)
+		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
+		if err != nil {
+			errorLog.Fatalln("Unable to connect to clickhouse %v, %v", config.ClickHouseConfig, err)
 		}
 
 		// sink will close producer internally
