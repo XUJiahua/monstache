@@ -1,4 +1,4 @@
-package kafka
+package common
 
 import (
 	"context"
@@ -7,24 +7,7 @@ import (
 	"time"
 )
 
-type Request struct {
-	namespace string
-	id        interface{}
-	doc       interface{}
-}
-
-func (r Request) GetNamespace() string {
-	return r.namespace
-}
-
-func (r Request) GetId() interface{} {
-	return r.id
-}
-
-func (r Request) GetDoc() interface{} {
-	return r.doc
-}
-
+// Sink it's a common Sink, all you need is injecting bulk.Client
 type Sink struct {
 	virtualDeleteFieldName string
 	opTimeFieldName        string
@@ -74,9 +57,9 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	}
 
 	request := Request{
-		namespace: op.Namespace,
-		id:        op.Id,
-		doc:       op.Data,
+		Namespace: op.Namespace,
+		Id:        op.Id,
+		Doc:       op.Data,
 	}
 	s.bulkProcessor.Add(request)
 

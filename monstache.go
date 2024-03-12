@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/rwynn/monstache/v6/pkg/sinks/common"
 	"github.com/rwynn/monstache/v6/pkg/sinks/console"
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
@@ -5462,7 +5463,7 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}
 
-		sink, err := kafka.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
+		sink, err := common.New(producer, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
 		if err != nil {
 			errorLog.Fatalln("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
 		}

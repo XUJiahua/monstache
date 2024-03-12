@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/rwynn/monstache/v6/pkg/sinks/common"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/require"
 	"log"
@@ -72,10 +73,10 @@ func getInstance(t *testing.T) *KafkaProducer {
 
 func TestKafkaProducer_Commit(t *testing.T) {
 	p := getInstance(t)
-	err := p.Commit(context.TODO(), []bulk.BulkableRequest{Request{
-		namespace: "db1.col1",
-		id:        "a",
-		doc:       "a",
+	err := p.Commit(context.TODO(), []bulk.BulkableRequest{common.Request{
+		Namespace: "db1.col1",
+		Id:        "a",
+		Doc:       "a",
 	}})
 	require.NoError(t, err)
 }
