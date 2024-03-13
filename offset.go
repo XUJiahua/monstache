@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -35,6 +36,7 @@ func getNamespaceDirectReadOffsets(client *mongo.Client, configDatabaseName stri
 }
 
 func saveNamespaceDirectReadOffset(client *mongo.Client, configDatabaseName string, resumeName string, ns string, offset interface{}) error {
+	logrus.Debugf("flush offset %v for %s", offset, ns)
 	col := client.Database(configDatabaseName).Collection(ConfigColResumableDirectreads)
 	doc := map[string]interface{}{
 		"offset": offset,

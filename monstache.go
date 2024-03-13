@@ -148,7 +148,7 @@ type stringargs []string
 type SinkConnector interface {
 	// RouteData expect op contain full document
 	RouteData(op *gtm.Op) (err error)
-	// RouteDelete _id is expected, todo: to get original document
+	// RouteDelete _id is expected
 	RouteDelete(op *gtm.Op) (err error)
 	// RouteDrop drop database/collection
 	RouteDrop(op *gtm.Op) (err error)
@@ -193,6 +193,8 @@ type indexClient struct {
 	bulkBackoffC       chan time.Duration
 	bulkBackoffMax     time.Duration
 	cleanOnExit        []Closer
+	lastId             interface{} // save the id if full sync
+	lastIdSaved        interface{}
 }
 
 // RouteData save to elasticsearch
@@ -428,6 +430,7 @@ type configOptions struct {
 	Workers                     stringargs
 	Worker                      string
 	ChangeStreamNs              stringargs     `toml:"change-stream-namespaces"`
+	DirectReadResumable         bool           `toml:"direct-read-resumable"`
 	DirectReadNs                stringargs     `toml:"direct-read-namespaces"`
 	DirectReadSplitMax          int            `toml:"direct-read-split-max"`
 	DirectReadConcur            int            `toml:"direct-read-concur"`
@@ -2270,6 +2273,9 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		}
 		if !config.DirectReadStateful && tomlConfig.DirectReadStateful {
 			config.DirectReadStateful = true
+		}
+		if !config.DirectReadResumable && tomlConfig.DirectReadResumable {
+			config.DirectReadResumable = true
 		}
 		if !config.ElasticRetry && tomlConfig.ElasticRetry {
 			config.ElasticRetry = true
@@ -4955,6 +4961,24 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 			errorLog.Fatalf("Error retrieving direct read state: %s", err)
 		}
 	}
+
+	var offsets map[string]interface{}
+	if config.DirectReadResumable {
+		// if enable resumable direct read, don't allow concurrent read one collection and multiple collection
+		if len(config.DirectReadNs) != 1 {
+			errorLog.Fatalf("direct-read-resumable enabled, only exact one collection is allowed")
+		}
+		if config.DirectReadSplitMax > 0 {
+			errorLog.Fatalf("direct-read-resumable enabled, concurrently read one collection is allowed")
+		}
+
+		var err error
+		offsets, err = getNamespaceDirectReadOffsets(ic.mongo, ic.config.ConfigDatabaseName, ic.config.ResumeName)
+		if err != nil {
+			errorLog.Fatalf("Error retrieving direct read offsets: %s", err)
+		}
+	}
+
 	gtmOpts := &gtm.Options{
 		After:               after,
 		Token:               token,
@@ -4969,6 +4993,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		BufferDuration:      ic.parseBufferDuration(),
 		BufferSize:          config.GtmSettings.BufferSize,
 		DirectReadNs:        config.DirectReadNs,
+		DirectReadOffsets:   offsets,
 		DirectReadSplitMax:  int32(config.DirectReadSplitMax),
 		DirectReadConcur:    config.DirectReadConcur,
 		DirectReadNoTimeout: config.DirectReadNoTimeout,
@@ -5040,6 +5065,19 @@ func (ic *indexClient) nextTimestamp() {
 		}
 		if err := ic.saveTimestamp(); err == nil {
 			ic.lastTsSaved = ic.lastTs
+		} else {
+			ic.processErr(err)
+		}
+	}
+}
+
+func (ic *indexClient) nextId() {
+	if len(ic.config.DirectReadNs) == 1 && ic.lastId != ic.lastIdSaved {
+		if err := ic.sinkConnector.Flush(); err != nil {
+			ic.processErr(err)
+		}
+		if err := saveNamespaceDirectReadOffset(ic.mongo, ic.config.ConfigDatabaseName, ic.config.ResumeName, ic.config.DirectReadNs[0], ic.lastId); err == nil {
+			ic.lastIdSaved = ic.lastId
 		} else {
 			ic.processErr(err)
 		}
@@ -5144,6 +5182,11 @@ func (ic *indexClient) eventLoop() {
 			} else {
 				ic.nextTimestamp()
 			}
+
+			if ic.config.DirectReadResumable {
+				logrus.Debugf("flush and save offset")
+				ic.nextId()
+			}
 		case <-heartBeat.C:
 			if ic.config.ClusterName == "" {
 				break
@@ -5185,6 +5228,8 @@ func (ic *indexClient) eventLoop() {
 				if ic.config.ResumeStrategy == tokenResumeStrategy {
 					ic.tokens[op.ResumeToken.StreamID] = op.ResumeToken.ResumeToken
 				}
+			} else if ic.config.DirectReadResumable {
+				ic.lastId = op.Id
 			}
 			if err = ic.routeOp(op); err != nil {
 				ic.processErr(err)
@@ -5499,7 +5544,7 @@ func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (Si
 }
 
 func main() {
-
+	logrus.SetLevel(logrus.DebugLevel)
 	config := mustConfig()
 
 	sh := &sigHandler{
