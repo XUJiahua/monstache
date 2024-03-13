@@ -4642,6 +4642,9 @@ func (ic *indexClient) startReadWait() {
 			if ic.config.Resume {
 				ic.saveTimestampFromReplStatus()
 			}
+			if ic.config.DirectReadResumable {
+				ic.nextId()
+			}
 			if exitAfterDirectReads {
 				var exit bool
 				ic.rwmutex.RLock()
@@ -4977,6 +4980,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		if err != nil {
 			errorLog.Fatalf("Error retrieving direct read offsets: %s", err)
 		}
+		logrus.Debugf("got offsets from %v", offsets)
 	}
 
 	gtmOpts := &gtm.Options{
@@ -5072,12 +5076,16 @@ func (ic *indexClient) nextTimestamp() {
 }
 
 func (ic *indexClient) nextId() {
+	logrus.Debugf("try to flush and save offset")
 	if len(ic.config.DirectReadNs) == 1 && ic.lastId != ic.lastIdSaved {
 		if err := ic.sinkConnector.Flush(); err != nil {
 			ic.processErr(err)
+		} else {
+			logrus.Debugf("data is flushed")
 		}
 		if err := saveNamespaceDirectReadOffset(ic.mongo, ic.config.ConfigDatabaseName, ic.config.ResumeName, ic.config.DirectReadNs[0], ic.lastId); err == nil {
 			ic.lastIdSaved = ic.lastId
+			logrus.Debugf("offset is flushed")
 		} else {
 			ic.processErr(err)
 		}
@@ -5184,7 +5192,6 @@ func (ic *indexClient) eventLoop() {
 			}
 
 			if ic.config.DirectReadResumable {
-				logrus.Debugf("flush and save offset")
 				ic.nextId()
 			}
 		case <-heartBeat.C:
