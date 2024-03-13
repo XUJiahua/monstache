@@ -1,5 +1,8 @@
 module github.com/rwynn/monstache/v6
 
+// https://github.com/rwynn/gtm/compare/master...XUJiahua:gtm:resumable?expand=1
+replace github.com/rwynn/gtm/v2 => github.com/XUJiahua/gtm/v2 v2.0.0-20240313085840-ad21f1e96a0c
+
 //replace github.com/rwynn/gtm/v2 => ../gtm
 
 require (
