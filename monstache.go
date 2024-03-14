@@ -4935,6 +4935,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 	}
 
 	var offsets map[string]interface{}
+	pipe := buildPipe(config)
 	if config.DirectReadResumable {
 		// if enable resumable direct read, don't allow concurrent read one collection and multiple collection
 		if len(config.DirectReadNs) != 1 {
@@ -4942,6 +4943,11 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		}
 		if config.DirectReadSplitMax > 0 {
 			errorLog.Fatalf("direct-read-resumable enabled, concurrently read one collection is allowed")
+		}
+
+		if pipe != nil {
+			pipe = nil
+			logrus.Debugf("direct-read-resumable enabled, pipe will be not disabled")
 		}
 
 		var err error
@@ -4965,6 +4971,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		WorkerCount:         10,
 		BufferDuration:      ic.parseBufferDuration(),
 		BufferSize:          config.GtmSettings.BufferSize,
+		DirectReadResumable: config.DirectReadResumable,
 		DirectReadNs:        config.DirectReadNs,
 		DirectReadOffsets:   offsets,
 		DirectReadSplitMax:  int32(config.DirectReadSplitMax),
@@ -4972,7 +4979,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		DirectReadNoTimeout: config.DirectReadNoTimeout,
 		DirectReadFilter:    directReadFilter,
 		Log:                 infoLog,
-		Pipe:                buildPipe(config),
+		Pipe:                pipe,
 		ChangeStreamNs:      config.ChangeStreamNs,
 		DirectReadBounded:   config.DirectReadBounded,
 		MaxAwaitTime:        ic.parseMaxAwaitTime(),
