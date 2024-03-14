@@ -13,12 +13,8 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
+	"github.com/rwynn/monstache/v6/pkg/sinks"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
-	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse"
-	"github.com/rwynn/monstache/v6/pkg/sinks/common"
-	"github.com/rwynn/monstache/v6/pkg/sinks/console"
-	"github.com/rwynn/monstache/v6/pkg/sinks/file"
-	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"
@@ -145,23 +141,12 @@ type buildInfo struct {
 
 type stringargs []string
 
-type SinkConnector interface {
-	// RouteData expect op contain full document
-	RouteData(op *gtm.Op) (err error)
-	// RouteDelete _id is expected
-	RouteDelete(op *gtm.Op) (err error)
-	// RouteDrop drop database/collection
-	RouteDrop(op *gtm.Op) (err error)
-	// Flush the batch messages
-	Flush() error
-}
-
 type indexClient struct {
 	gtmCtx             *gtm.OpCtxMulti
 	config             *configOptions
 	mongo              *mongo.Client
 	mongoConfig        *mongo.Client
-	sinkConnector      SinkConnector
+	sinkConnector      sinks.SinkConnector
 	bulk               *elastic.BulkProcessor
 	bulkStats          *elastic.BulkProcessor
 	client             *elastic.Client
@@ -192,7 +177,7 @@ type indexClient struct {
 	bulkBackoff        elastic.Backoff
 	bulkBackoffC       chan time.Duration
 	bulkBackoffMax     time.Duration
-	cleanOnExit        []Closer
+	cleanOnExit        []sinks.Closer
 	lastId             interface{} // save the id if full sync
 	lastIdSaved        interface{}
 }
@@ -458,15 +443,7 @@ type configOptions struct {
 	PruneInvalidJSON            bool           `toml:"prune-invalid-json"`
 	Debug                       bool
 	mongoClientOptions          *options.ClientOptions
-	ConsoleSink                 bool
-	FileSink                    bool
-	KafkaSink                   bool
-	ClickHouseSink              bool
-	VirtualDeleteFieldName      string                      `toml:"virtual-delete-field-name"`
-	OpTimeFieldName             string                      `toml:"op-time-field-name"`
-	KafkaBrokers                string                      `toml:"kafka-brokers"`
-	KafkaTopicPrefix            string                      `toml:"kafka-topic-prefix"`
-	ClickHouseConfig            clickhouse.ClickHouseConfig `toml:"clickhouse"`
+	SinkConfig                  sinks.SinkConfig `toml:"sink"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -1917,10 +1894,6 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	flag.StringVar(&config.OplogDateFieldName, "oplog-date-field-name", "", "Field name to use for the oplog date")
 	flag.StringVar(&config.OplogDateFieldFormat, "oplog-date-field-format", "", "Format to use for the oplog date")
 	flag.BoolVar(&config.Debug, "debug", false, "True to enable verbose debug information")
-	flag.BoolVar(&config.ConsoleSink, "console", false, "True to enable console print op log")
-	flag.BoolVar(&config.FileSink, "file", false, "True to enable file sink")
-	flag.BoolVar(&config.KafkaSink, "kafka", false, "True to enable kafka sink")
-	flag.BoolVar(&config.ClickHouseSink, "clickhouse", false, "True to enable clickhouse sink")
 	flag.Parse()
 	return config
 }
@@ -2508,11 +2481,7 @@ func (config *configOptions) loadConfigFile() *configOptions {
 			config.ElasticPKIAuth = tomlConfig.ElasticPKIAuth
 		}
 
-		config.VirtualDeleteFieldName = tomlConfig.VirtualDeleteFieldName
-		config.OpTimeFieldName = tomlConfig.OpTimeFieldName
-		config.KafkaBrokers = tomlConfig.KafkaBrokers
-		config.ClickHouseConfig = tomlConfig.ClickHouseConfig
-		config.KafkaTopicPrefix = tomlConfig.KafkaTopicPrefix
+		config.SinkConfig = tomlConfig.SinkConfig
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
@@ -5495,61 +5464,6 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 	return elasticClient
 }
 
-type Closer interface {
-	Close() error
-}
-
-func buildSinkConnector(config *configOptions, afterBulk bulk.BulkAfterFunc) (SinkConnector, []Closer) {
-	var closers []Closer
-
-	// fixme: refactor console and file sink using common sink + commit client
-	if config.ConsoleSink {
-		return &console.Sink{}, closers
-	}
-	if config.FileSink {
-		return &file.Sink{
-			VirtualDeleteFieldName: config.VirtualDeleteFieldName,
-		}, closers
-	}
-
-	if config.KafkaSink {
-		client, err := kafka.NewKafkaProducer(config.KafkaBrokers, func(s string, i ...interface{}) {
-			traceLog.Printf(s, i...)
-		}, func(s string, i ...interface{}) {
-			errorLog.Printf(s, i...)
-		})
-		if err != nil {
-			errorLog.Fatalf("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
-		}
-
-		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
-		if err != nil {
-			errorLog.Fatalf("Unable to connect to kafka %s, %v", config.KafkaBrokers, err)
-		}
-
-		// sink will close client internally
-		closers = append(closers, sink)
-
-		return sink, closers
-	}
-
-	if config.ClickHouseSink {
-		logrus.Infof("clickhouse: %v", config.ClickHouseConfig)
-		client := clickhouse.NewClient(config.ClickHouseConfig)
-		sink, err := common.New(client, afterBulk, config.VirtualDeleteFieldName, config.OpTimeFieldName)
-		if err != nil {
-			errorLog.Fatalf("Unable to connect to clickhouse %v, %v", config.ClickHouseConfig, err)
-		}
-
-		// sink will close producer internally
-		closers = append(closers, sink)
-
-		return sink, closers
-	}
-
-	return nil, closers
-}
-
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 	config := mustConfig()
@@ -5586,7 +5500,10 @@ func main() {
 	}
 	// use global backoff to slow down source (oplog) and sink (bulk worker) if bulk commit failed
 	afterBulk := ic.afterBulkCommon()
-	sinkConnector, closers := buildSinkConnector(config, afterBulk)
+	sinkConnector, closers, err := sinks.CreateSink(config.SinkConfig, afterBulk)
+	if err != nil {
+		errorLog.Fatalf("failed to create sink connector: %v", err)
+	}
 	if sinkConnector != nil {
 		ic.sinkConnector = sinkConnector
 		ic.cleanOnExit = closers
