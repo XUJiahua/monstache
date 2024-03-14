@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	sink, err := New(p, nil, "", "")
+	sink, err := New(p, nil, SinkConfig{})
 	require.NoError(t, err)
 
 	time.Sleep(time.Second * 11)
