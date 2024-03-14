@@ -9,16 +9,16 @@ import (
 )
 
 type SinkConfig struct {
-	ClickHouseConfig clickhouse.Config
-	KafkaConfig      kafka.Config
-	FileConfig       file.Config
-	ConsoleConfig    console.Config
-	Transform        common.TransformConfig
-	Bulk             BulkConfig
+	ClickHouseConfig clickhouse.Config      `toml:"clickhouse"`
+	KafkaConfig      kafka.Config           `toml:"kafka"`
+	FileConfig       file.Config            `toml:"file"`
+	ConsoleConfig    console.Config         `toml:"console"`
+	Transform        common.TransformConfig `toml:"transform"`
+	Bulk             BulkConfig             `toml:"bulk"`
 }
 
 type BulkConfig struct {
-	Workers              int
-	BatchSize            int
-	FlushIntervalSeconds int
+	Workers              int `toml:"workers"`
+	BatchSize            int `toml:"batch-size"`
+	FlushIntervalSeconds int `toml:"flush-interval-seconds"`
 }

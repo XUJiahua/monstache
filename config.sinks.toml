@@ -1,0 +1,29 @@
+[sink]
+  [sink.clickhouse]
+    enabled = true
+    endpoint = "http://localhost:8123"
+    skip-unknown-fields = true
+    date-time-best-effort = true
+    [sink.clickhouse.auth]
+      user = "default"
+      password = ""
+    [sink.clickhouse.sinks]
+      [sink.clickhouse.sinks."db.col"]
+        database = "db"
+        table = "table"
+  [sink.kafka]
+    enabled = false
+    kafka-brokers = ""
+    kafka-topic-prefix = ""
+  [sink.file]
+    enabled = false
+  [sink.console]
+    enabled = false
+  [sink.transform]
+    virtual-delete-field-name = ""
+    op-time-field-name = ""
+    update-time-field-name = ""
+  [sink.bulk]
+    workers = 1
+    batch-size = 1000
+    flush-interval-seconds = 5

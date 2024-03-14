@@ -7,9 +7,9 @@ import (
 )
 
 type TransformConfig struct {
-	VirtualDeleteFieldName string
-	OpTimeFieldName        string
-	UpdateTimeFieldName    string
+	VirtualDeleteFieldName string `toml:"virtual-delete-field-name"`
+	OpTimeFieldName        string `toml:"op-time-field-name"`
+	UpdateTimeFieldName    string `toml:"update-time-field-name"`
 }
 
 // Sink it's a common Sink, all you need is injecting bulk.Client

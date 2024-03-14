@@ -6,7 +6,7 @@ import (
 )
 
 type Config struct {
-	Enabled bool
+	Enabled bool `toml:"enabled"`
 }
 
 type Client struct {

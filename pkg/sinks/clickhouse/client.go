@@ -15,13 +15,13 @@ import (
 )
 
 type Config struct {
-	Enabled bool
+	Enabled bool `toml:"enabled"`
 	// example: http://localhost:8123
 	Endpoint string `toml:"endpoint"`
 	// Sets `input_format_skip_unknown_fields`, allowing ClickHouse to discard fields not present in the table schema.
-	SkipUnknownFields bool `toml:"skip_unknown_fields"`
+	SkipUnknownFields bool `toml:"skip-unknown-fields"`
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
-	DateTimeBestEffort bool `toml:"date_time_best_effort"`
+	DateTimeBestEffort bool `toml:"date-time-best-effort"`
 	Auth               Auth `toml:"auth"`
 	// mongodb op namespace (database.collection) -> clickhouse namespace (database.table)
 	Sinks map[string]Namespace `toml:"sinks"`
@@ -37,9 +37,9 @@ type Namespace struct {
 // https://clickhouse.com/docs/en/interfaces/http#default-database
 type Auth struct {
 	// If the user name is not specified, the default name is used.
-	User string
+	User string `toml:"user"`
 	// If the password is not specified, the empty password is used.
-	Password string
+	Password string `toml:"password"`
 }
 
 type Client struct {

@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	Enabled          bool
+	Enabled          bool   `toml:"enabled"`
 	KafkaBrokers     string `toml:"kafka-brokers"`
 	KafkaTopicPrefix string `toml:"kafka-topic-prefix"`
 }
