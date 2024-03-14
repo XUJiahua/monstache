@@ -88,9 +88,6 @@ relate-buffer = 0
 post-processors = 0
 prune-invalid-json = false
 Debug = false
-virtual-delete-field-name = "__is_deleted"
-kafka-brokers = "10.30.11.112:9092"
-kafka-topic-prefix = "monstache."
 
 [aws-connect]
   Strategy = 0
@@ -120,3 +117,33 @@ kafka-topic-prefix = "monstache."
 [elasticsearch-pki-auth]
   cert-file = ""
   key-file = ""
+
+[sink]
+  [sink.clickhouse]
+    enabled = false
+    endpoint = "http://localhost:8123"
+    skip-unknown-fields = true
+    date-time-best-effort = true
+    [sink.clickhouse.auth]
+      user = "default"
+      password = ""
+    [sink.clickhouse.sinks]
+      [sink.clickhouse.sinks."db.col"]
+        database = "db"
+        table = "table"
+  [sink.kafka]
+    enabled = false
+    kafka-brokers = ""
+    kafka-topic-prefix = ""
+  [sink.file]
+    enabled = true
+  [sink.console]
+    enabled = false
+  [sink.transform]
+    virtual-delete-field-name = ""
+    op-time-field-name = ""
+    update-time-field-name = ""
+  [sink.bulk]
+    workers = 1
+    batch-size = 1000
+    flush-interval-seconds = 5
