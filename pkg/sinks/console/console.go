@@ -5,24 +5,28 @@ import (
 	"github.com/rwynn/gtm/v2"
 )
 
-type Sink struct {
+type Config struct {
+	Enabled bool
 }
 
-func (sink Sink) RouteDrop(op *gtm.Op) (err error) {
+type Client struct {
+}
+
+func (sink Client) RouteDrop(op *gtm.Op) (err error) {
 	fmt.Println(op)
 	return nil
 }
 
-func (sink Sink) RouteData(op *gtm.Op) (err error) {
+func (sink Client) RouteData(op *gtm.Op) (err error) {
 	fmt.Println(op)
 	return nil
 }
 
-func (sink Sink) RouteDelete(op *gtm.Op) (err error) {
+func (sink Client) RouteDelete(op *gtm.Op) (err error) {
 	fmt.Println(op)
 	return nil
 }
 
-func (sink Sink) Flush() error {
+func (sink Client) Flush() error {
 	return nil
 }

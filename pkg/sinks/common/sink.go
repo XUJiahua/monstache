@@ -1,21 +1,10 @@
 package common
 
 import (
-	"context"
 	"github.com/rwynn/gtm/v2"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"time"
 )
-
-type SinkConfig struct {
-	Transform TransformConfig
-	Bulk      BulkConfig
-}
-
-type BulkConfig struct {
-	Workers   int
-	BatchSize int
-}
 
 type TransformConfig struct {
 	VirtualDeleteFieldName string
@@ -26,69 +15,51 @@ type TransformConfig struct {
 // Sink it's a common Sink, all you need is injecting bulk.Client
 type Sink struct {
 	bulkProcessor *bulk.BulkProcessor
-	Transform     TransformConfig
+	transform     TransformConfig
 }
 
 func (s *Sink) Flush() error {
 	return s.bulkProcessor.Flush()
 }
 
-const defaultBulkWorkers = 1
-const defaultBulkBatchSize = 1000
-
-func New(client bulk.Client, afterBulk bulk.BulkAfterFunc, sinkConfig SinkConfig) (*Sink, error) {
-	if sinkConfig.Bulk.BatchSize == 0 {
-		sinkConfig.Bulk.BatchSize = defaultBulkBatchSize
+func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*Sink, error) {
+	if transformConfig.VirtualDeleteFieldName == "" {
+		transformConfig.VirtualDeleteFieldName = "__is_deleted"
 	}
-	if sinkConfig.Bulk.Workers == 0 {
-		sinkConfig.Bulk.Workers = defaultBulkWorkers
+	if transformConfig.OpTimeFieldName == "" {
+		transformConfig.OpTimeFieldName = "__op_time"
 	}
-	if sinkConfig.Transform.VirtualDeleteFieldName == "" {
-		sinkConfig.Transform.VirtualDeleteFieldName = "__is_deleted"
-	}
-	if sinkConfig.Transform.OpTimeFieldName == "" {
-		sinkConfig.Transform.OpTimeFieldName = "__op_time"
-	}
-	if sinkConfig.Transform.UpdateTimeFieldName == "" {
-		sinkConfig.Transform.UpdateTimeFieldName = "__update_time"
-	}
-
-	bulkProcessorService := bulk.NewBulkProcessorService(client)
-	bulkProcessorService.Workers(sinkConfig.Bulk.Workers)
-	bulkProcessorService.BulkActions(sinkConfig.Bulk.BatchSize)
-	bulkProcessorService.FlushInterval(5 * time.Second)
-	bulkProcessorService.After(afterBulk)
-	bulkProcessor, err := bulkProcessorService.Do(context.TODO())
-	if err != nil {
-		return nil, err
+	if transformConfig.UpdateTimeFieldName == "" {
+		transformConfig.UpdateTimeFieldName = "__update_time"
 	}
 
 	sink := &Sink{
 		bulkProcessor: bulkProcessor,
-		Transform:     sinkConfig.Transform,
+		transform:     transformConfig,
 	}
 
 	return sink, nil
 }
 
+// transform doc and save to bulk processor
 func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
-	if isDeleteOp && s.Transform.VirtualDeleteFieldName != "" {
-		op.Data[s.Transform.VirtualDeleteFieldName] = 1
+	if isDeleteOp && s.transform.VirtualDeleteFieldName != "" {
+		op.Data[s.transform.VirtualDeleteFieldName] = 1
 	}
-	if op.IsSourceOplog() && s.Transform.OpTimeFieldName != "" {
+	if op.IsSourceOplog() && s.transform.OpTimeFieldName != "" {
 		// add new column op_time for tracing/debugging
-		op.Data[s.Transform.OpTimeFieldName] = op.Timestamp.T
+		op.Data[s.transform.OpTimeFieldName] = op.Timestamp.T
 	}
 	// __update_time derived from updateTime
-	if s.Transform.UpdateTimeFieldName != "" {
+	if s.transform.UpdateTimeFieldName != "" {
 		// make it configurable
 		if updateTime, ok := op.Data["updateTime"]; ok {
 			if tStr, ok := updateTime.(string); ok {
 				if t, ok := parseTime(tStr); ok {
-					op.Data[s.Transform.UpdateTimeFieldName] = t
+					op.Data[s.transform.UpdateTimeFieldName] = t
 				}
 			} else if t, ok := updateTime.(time.Time); ok {
-				op.Data[s.Transform.UpdateTimeFieldName] = t.UnixMilli()
+				op.Data[s.transform.UpdateTimeFieldName] = t.UnixMilli()
 			}
 		}
 	}

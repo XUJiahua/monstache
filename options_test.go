@@ -8,7 +8,7 @@ import (
 )
 
 func TestToTomlString(t *testing.T) {
-	tomlStr := ToTomlString(&configOptions{ClickHouseConfig: clickhouse.ClickHouseConfig{
+	tomlStr := ToTomlString(&configOptions{ClickHouseConfig: clickhouse.Config{
 		Endpoint:           "http://localhost:8123",
 		SkipUnknownFields:  true,
 		DateTimeBestEffort: true,

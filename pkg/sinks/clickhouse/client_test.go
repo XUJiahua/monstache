@@ -21,7 +21,7 @@ func TestClient_BatchInsert(t *testing.T) {
 		rows = append(rows, twoRows...)
 	}
 
-	client := NewClient(ClickHouseConfig{
+	client := NewClient(Config{
 		Endpoint:           "http://10.30.11.112:8123/",
 		SkipUnknownFields:  true,
 		DateTimeBestEffort: true,

@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+type Config struct {
+	Enabled          bool
+	KafkaBrokers     string `toml:"kafka-brokers"`
+	KafkaTopicPrefix string `toml:"kafka-topic-prefix"`
+}
+
 type KafkaProducer struct {
 	w     *kafka.Writer
 	infoL LoggerFunc

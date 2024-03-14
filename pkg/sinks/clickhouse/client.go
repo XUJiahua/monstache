@@ -14,7 +14,8 @@ import (
 	"net/url"
 )
 
-type ClickHouseConfig struct {
+type Config struct {
+	Enabled bool
 	// example: http://localhost:8123
 	Endpoint string `toml:"endpoint"`
 	// Sets `input_format_skip_unknown_fields`, allowing ClickHouse to discard fields not present in the table schema.
@@ -43,7 +44,7 @@ type Auth struct {
 
 type Client struct {
 	httpClient *http.Client
-	config     ClickHouseConfig
+	config     Config
 }
 
 func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
@@ -68,7 +69,7 @@ func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) err
 	return nil
 }
 
-func NewClient(config ClickHouseConfig) *Client {
+func NewClient(config Config) *Client {
 	return &Client{
 		// fixme: a better settings
 		httpClient: http.DefaultClient,
