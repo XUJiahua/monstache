@@ -47,6 +47,10 @@ type Client struct {
 	config     Config
 }
 
+func (c Client) Name() string {
+	return "clickhouse"
+}
+
 func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
 	docsByNS := make(map[string][]interface{})
 	for _, request := range requests {

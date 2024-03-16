@@ -8,17 +8,17 @@ import (
 var (
 	OpsReceived = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "monstache_received_ops_total",
-		Help: "The total number of received mongodb oplogs",
+		Help: "The total number of received mongodb ops",
 	}, []string{"ns", "op"})
 
 	OpsProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "monstache_processed_ops_total",
-		Help: "The total number of processed oplogs by sink",
+		Help: "The total number of processed ops by sink",
 	}, []string{"sink"})
 
-	OpsProcessedLatencyHistogram = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "monstache_processed_ops_latency",
-		Help:    "How long (ms) ops processed by sink",
+	SinkCommitLatencyHistogram = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "monstache_sink_commit_latency",
+		Help:    "How long (ms) each sink commit take",
 		Buckets: []float64{100, 300, 500, 1000},
 	}, []string{
 		"sink",

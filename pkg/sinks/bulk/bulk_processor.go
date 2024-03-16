@@ -5,6 +5,7 @@ package bulk
 import (
 	"context"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"sync/atomic"
@@ -20,6 +21,7 @@ type BulkableRequest interface {
 }
 
 type Client interface {
+	Name() string
 	Commit(ctx context.Context, requests []BulkableRequest) error
 }
 
@@ -435,6 +437,13 @@ func (s *BulkService) Do(ctx context.Context) error {
 	if len(s.requests) == 0 {
 		return nil
 	}
+	start := time.Now()
+	num := len(s.requests)
+	defer func() {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metrics.SinkCommitLatencyHistogram.WithLabelValues(s.client.Name()).Observe(elapsed)
+		metrics.OpsProcessed.WithLabelValues(s.client.Name()).Add(float64(num))
+	}()
 	if err := s.client.Commit(ctx, s.requests); err != nil {
 		return err
 	}

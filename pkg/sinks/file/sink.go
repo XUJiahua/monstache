@@ -12,6 +12,10 @@ type Config struct {
 type Client struct {
 }
 
+func (s Client) Name() string {
+	return "file"
+}
+
 func (s Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
 	//TODO implement me
 	panic("implement me")

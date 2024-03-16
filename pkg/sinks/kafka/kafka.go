@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/rwynn/monstache/v6/pkg/metrics"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/segmentio/kafka-go"
 	"strings"
-	"time"
 )
 
 type Config struct {
@@ -20,6 +18,10 @@ type Config struct {
 type KafkaProducer struct {
 	w     *kafka.Writer
 	infoL LoggerFunc
+}
+
+func (k KafkaProducer) Name() string {
+	return "kafka"
 }
 
 func (k KafkaProducer) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
@@ -44,13 +46,6 @@ func (k KafkaProducer) Commit(ctx context.Context, requests []bulk.BulkableReque
 }
 
 func (k KafkaProducer) Produce(topic string, key, data []byte) error {
-	start := time.Now()
-	defer func() {
-		elapsed := float64(time.Since(start).Milliseconds())
-		metrics.OpsProcessedLatencyHistogram.WithLabelValues("kafka").Observe(elapsed)
-		metrics.OpsProcessed.WithLabelValues("kafka").Inc()
-	}()
-
 	return k.w.WriteMessages(context.TODO(), kafka.Message{
 		Topic: topic,
 		Key:   key,
@@ -59,13 +54,6 @@ func (k KafkaProducer) Produce(topic string, key, data []byte) error {
 }
 
 func (k KafkaProducer) ProduceBatch(ctx context.Context, msgs ...kafka.Message) error {
-	start := time.Now()
-	defer func() {
-		elapsed := float64(time.Since(start).Milliseconds())
-		metrics.OpsProcessedLatencyHistogram.WithLabelValues("kafka").Observe(elapsed)
-		metrics.OpsProcessed.WithLabelValues("kafka").Add(float64(len(msgs)))
-	}()
-
 	return k.w.WriteMessages(ctx, msgs...)
 }
 
