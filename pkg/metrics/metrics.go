@@ -6,6 +6,11 @@ import (
 )
 
 var (
+	CurrentOpsTime = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "monstache_current_op_ts",
+		Help: "Current op timestamp (op time for oplog, _id time for direct read)",
+	})
+
 	OpsReceived = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "monstache_received_ops_total",
 		Help: "The total number of received mongodb ops",

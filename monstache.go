@@ -5208,11 +5208,17 @@ func (ic *indexClient) eventLoop() {
 
 			if op.IsSourceOplog() {
 				ic.lastTs = op.Timestamp
+				// A 32-bit integer representing the number of seconds since the Unix epoch
+				metrics.CurrentOpsTime.Set(float64(ic.lastTs.T))
+
 				if ic.config.ResumeStrategy == tokenResumeStrategy {
 					ic.tokens[op.ResumeToken.StreamID] = op.ResumeToken.ResumeToken
 				}
 			} else if ic.config.DirectReadResumable {
 				ic.lastId = op.Id
+				if id, ok := ic.lastId.(primitive.ObjectID); ok {
+					metrics.CurrentOpsTime.Set(float64(id.Timestamp().Unix()))
+				}
 			}
 			if err = ic.routeOp(op); err != nil {
 				ic.processErr(err)
