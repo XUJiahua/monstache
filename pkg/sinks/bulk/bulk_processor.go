@@ -358,6 +358,7 @@ func (w *bulkWorker) work(ctx context.Context) {
 			// todo: wait for client back online
 		}
 	}
+	logrus.Infof("worker %d stopped", w.index)
 }
 
 func (w *bulkWorker) commitRequired() bool {
@@ -444,6 +445,7 @@ func (s *BulkService) Do(ctx context.Context) error {
 		metrics.SinkCommitLatencyHistogram.WithLabelValues(s.client.Name()).Observe(elapsed)
 		metrics.OpsProcessed.WithLabelValues(s.client.Name()).Add(float64(num))
 	}()
+	logrus.Debugf("try to commit %d requests", num)
 	if err := s.client.Commit(ctx, s.requests); err != nil {
 		return err
 	}

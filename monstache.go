@@ -5472,8 +5472,10 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 }
 
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
 	config := mustConfig()
+	if config.Verbose {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 
 	sh := &sigHandler{
 		clientStartedC: make(chan *indexClient),

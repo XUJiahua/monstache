@@ -3,6 +3,7 @@ package file
 import (
 	"context"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ func (s Client) Name() string {
 }
 
 func (s Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
-	//TODO implement me
-	panic("implement me")
+	// now as a black hole
+	logrus.Debugf("%d requests processed", len(requests))
+	return nil
 }
