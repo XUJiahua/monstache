@@ -1,7 +1,7 @@
 module github.com/rwynn/monstache/v6
 
 // https://github.com/rwynn/gtm/compare/master...XUJiahua:gtm:resumable?expand=1
-replace github.com/rwynn/gtm/v2 => github.com/XUJiahua/gtm/v2 v2.0.0-20240316133306-c1a586893933
+replace github.com/rwynn/gtm/v2 => github.com/XUJiahua/gtm/v2 v2.0.0-20240316141540-2b840609a9c1
 
 //replace github.com/rwynn/gtm/v2 => ../gtm
 
@@ -19,7 +19,7 @@ require (
 	github.com/rwynn/gtm/v2 v2.1.2
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 	go.mongodb.org/mongo-driver v1.10.6
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
