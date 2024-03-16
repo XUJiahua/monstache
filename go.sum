@@ -603,8 +603,8 @@ github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbi
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c/go.mod h1:X0CRv0ky0k6m906ixxpzmDRLvX58TFUKS2eePweuyxk=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/XUJiahua/gtm/v2 v2.0.0-20240316122240-f48238f375c1 h1:s6741Ws+jMd+dbUA0A/kkOpCs9o1VtEYA3L3LPjbxxg=
-github.com/XUJiahua/gtm/v2 v2.0.0-20240316122240-f48238f375c1/go.mod h1:Y0g0ws/zJJqUaP2U8aAgJ0sGfGlY9KM5oLjNn4oz+FM=
+github.com/XUJiahua/gtm/v2 v2.0.0-20240316133306-c1a586893933 h1:tlLoAlhXl6nPl1HScOLo7v6jqFMALoLy5LaCyIYQs/0=
+github.com/XUJiahua/gtm/v2 v2.0.0-20240316133306-c1a586893933/go.mod h1:Y0g0ws/zJJqUaP2U8aAgJ0sGfGlY9KM5oLjNn4oz+FM=
 github.com/ajstarks/deck v0.0.0-20200831202436-30c9fc6549a9/go.mod h1:JynElWSGnm/4RlzPXRlREEwqTHAN3T56Bv2ITsFT3gY=
 github.com/ajstarks/deck/generate v0.0.0-20210309230005-c3f852c02e19/go.mod h1:T13YZdzov6OU0A1+RfKZiZN9ca6VeKdBdyDV+BY97Tk=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
