@@ -15,6 +15,9 @@ type TransformConfig struct {
 	VersionFieldName       string `toml:"system-field-version"`
 	VirtualDeleteFieldName string `toml:"system-field-virtual-delete"`
 
+	// partition by date
+	DateFieldName string `toml:"system-field-date"`
+
 	// Debugging fields
 	NamespaceFieldName string `toml:"system-field-namespace"`
 	OpTimeFieldName    string `toml:"system-field-op-time"`
@@ -43,6 +46,9 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 	if transformConfig.VirtualDeleteFieldName == "" {
 		transformConfig.VirtualDeleteFieldName = "__is_deleted"
 	}
+	if transformConfig.DateFieldName == "" {
+		transformConfig.DateFieldName = "__date"
+	}
 	if transformConfig.NamespaceFieldName == "" {
 		transformConfig.NamespaceFieldName = "__ns"
 	}
@@ -70,6 +76,13 @@ func TimeStampToInt64(ts primitive.Timestamp) int64 {
 
 // transform doc and save to bulk processor
 func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
+	var objectID primitive.ObjectID
+	var ok bool
+	if objectID, ok = op.Id.(primitive.ObjectID); !ok {
+		logrus.Warnf("invalid _id type: %T, namespace: %s . Expecting ObjectId. Skip this op.", op.Id, op.Namespace)
+		return nil
+	}
+
 	data := op.Data
 	if s.transform.EmbedDoc {
 		data = make(map[string]interface{})
@@ -87,14 +100,9 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 		data[s.transform.OpTimeFieldName] = op.Timestamp.T
 		data[s.transform.VersionFieldName] = TimeStampToInt64(op.Timestamp)
 	} else {
-		// parse _id ObjectId, get timestamp
-		if id, ok := op.Id.(primitive.ObjectID); ok {
-			data[s.transform.VersionFieldName] = id.Timestamp().Unix() << 32
-		} else {
-			logrus.Warnf("invalid _id type: %T, namespace: %s . Expecting ObjectId. Skip this op.", op.Id, op.Namespace)
-			return nil
-		}
+		data[s.transform.VersionFieldName] = objectID.Timestamp().Unix() << 32
 	}
+	data[s.transform.DateFieldName] = objectID.Timestamp().Format("2006-01-02")
 
 	request := Request{
 		Namespace: op.Namespace,

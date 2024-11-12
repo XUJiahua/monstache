@@ -45,7 +45,7 @@ func TestToTomlString(t *testing.T) {
 		Transform: common.TransformConfig{
 			VirtualDeleteFieldName: "",
 			OpTimeFieldName:        "",
-			UpdateTimeFieldName:    "",
+			VersionFieldName:       "",
 		},
 		Bulk: sinks.BulkConfig{
 			Workers:              1,
