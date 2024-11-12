@@ -23,6 +23,7 @@ type BulkableRequest interface {
 type Client interface {
 	Name() string
 	Commit(ctx context.Context, requests []BulkableRequest) error
+	EmbedDoc() bool
 }
 
 // BulkProcessorService allows to easily process bulk requests. It allows setting

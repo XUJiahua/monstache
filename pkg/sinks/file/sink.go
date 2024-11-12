@@ -13,6 +13,9 @@ type Config struct {
 type Client struct {
 }
 
+func (s Client) EmbedDoc() bool {
+	return false
+}
 func (s Client) Name() string {
 	return "file"
 }

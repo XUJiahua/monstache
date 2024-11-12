@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/segmentio/kafka-go"
-	"strings"
 )
 
 type Config struct {
@@ -18,6 +19,10 @@ type Config struct {
 type KafkaProducer struct {
 	w     *kafka.Writer
 	infoL LoggerFunc
+}
+
+func (k KafkaProducer) EmbedDoc() bool {
+	return false
 }
 
 func (k KafkaProducer) Name() string {

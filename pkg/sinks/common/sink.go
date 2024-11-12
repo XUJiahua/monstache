@@ -19,6 +19,11 @@ type TransformConfig struct {
 	NamespaceFieldName string `toml:"system-field-namespace"`
 	OpTimeFieldName    string `toml:"system-field-op-time"`
 	SyncTimeFieldName  string `toml:"system-field-sync-time"`
+
+	EmbedDocFieldName string `toml:"system-field-embed-doc"`
+
+	// embed original data, unmodified
+	EmbedDoc bool `toml:"-"`
 }
 
 // Sink it's a common Sink, all you need is injecting bulk.Client
@@ -47,6 +52,9 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 	if transformConfig.SyncTimeFieldName == "" {
 		transformConfig.SyncTimeFieldName = "__sync_time"
 	}
+	if transformConfig.EmbedDocFieldName == "" {
+		transformConfig.EmbedDocFieldName = "doc"
+	}
 
 	sink := &Sink{
 		bulkProcessor: bulkProcessor,
@@ -62,14 +70,16 @@ func TimeStampToInt64(ts primitive.Timestamp) int64 {
 
 // transform doc and save to bulk processor
 func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
-	now := time.Now().Unix()
-	data := make(map[string]interface{})
-	data[s.transform.NamespaceFieldName] = op.Namespace
-	data["_id"] = op.Id
-	// doc is the original data, unmodified
-	data["doc"] = op.Data
-	data[s.transform.SyncTimeFieldName] = now
+	data := op.Data
+	if s.transform.EmbedDoc {
+		data = make(map[string]interface{})
+		data["_id"] = op.Id
+		// embed original data, unmodified
+		data[s.transform.EmbedDocFieldName] = op.Data
+	}
 
+	data[s.transform.NamespaceFieldName] = op.Namespace
+	data[s.transform.SyncTimeFieldName] = time.Now().Unix()
 	if isDeleteOp {
 		data[s.transform.VirtualDeleteFieldName] = 1
 	}

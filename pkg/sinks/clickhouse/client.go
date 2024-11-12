@@ -47,6 +47,10 @@ type Client struct {
 	config     Config
 }
 
+func (c Client) EmbedDoc() bool {
+	return true
+}
+
 func (c Client) Name() string {
 	return "clickhouse"
 }

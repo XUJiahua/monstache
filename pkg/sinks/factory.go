@@ -2,6 +2,8 @@ package sinks
 
 import (
 	"context"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/rwynn/gtm/v2"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
@@ -11,7 +13,6 @@ import (
 	"github.com/rwynn/monstache/v6/pkg/sinks/file"
 	"github.com/rwynn/monstache/v6/pkg/sinks/kafka"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 type SinkConnector interface {
@@ -79,6 +80,7 @@ func CreateSink(sinkConfig SinkConfig, afterBulk bulk.BulkAfterFunc) (SinkConnec
 		return nil, nil, err
 	}
 
+	sinkConfig.Transform.EmbedDoc = client.EmbedDoc()
 	sink, err := common.New(sinkConfig.Transform, bulkProcessor)
 	if err != nil {
 		return nil, nil, err
