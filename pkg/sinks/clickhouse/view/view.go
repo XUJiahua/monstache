@@ -9,7 +9,7 @@ import (
 	"github.com/samber/lo"
 )
 
-type KeyCollector interface {
+type FieldCollector interface {
 	GetKeys() []string
 }
 
@@ -17,12 +17,12 @@ type ViewBuilder struct {
 	databaseTable     string
 	databaseTableView string
 	// keyCollector collect keys from documents constantly
-	keyCollector KeyCollector
+	keyCollector FieldCollector
 }
 
 // NewViewBuilder creates a new ViewBuilder
 // databaseTableView is the table name of the view, if it's empty, it will be set to databaseTable + "_view"
-func NewViewBuilder(databaseTable, databaseTableView string, keyCollector KeyCollector) *ViewBuilder {
+func NewViewBuilder(databaseTable, databaseTableView string, keyCollector FieldCollector) *ViewBuilder {
 	if databaseTableView == "" {
 		databaseTableView = fmt.Sprintf("%s_view", databaseTable)
 	}

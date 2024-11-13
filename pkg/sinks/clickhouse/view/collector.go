@@ -9,26 +9,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type NSKeyCollector struct {
-	ns   string
-	mu   sync.Mutex
-	keys map[string]struct{}
+type TableFieldCollector struct {
+	table string
+	mu    sync.Mutex
+	keys  map[string]struct{}
 }
 
-func NewMockNSKeyCollector(ns string, keys []string) *NSKeyCollector {
+func NewMockTableFieldCollector(table string, keys []string) *TableFieldCollector {
 	keysMap := make(map[string]struct{})
 	for _, k := range keys {
 		keysMap[k] = struct{}{}
 	}
-	return &NSKeyCollector{ns: ns, keys: keysMap}
+	return &TableFieldCollector{table: table, keys: keysMap}
 }
 
-func NewNSKeyCollector(ns string) *NSKeyCollector {
+func NewTableFieldCollector(table string) *TableFieldCollector {
 	keys := make(map[string]struct{})
-	return &NSKeyCollector{ns: ns, keys: keys}
+	return &TableFieldCollector{keys: keys, table: table}
 }
 
-func (kc *NSKeyCollector) CollectAny(doc interface{}) {
+func (kc *TableFieldCollector) CollectAny(doc interface{}) {
 	jsonStr, err := json.Marshal(doc)
 	if err != nil {
 		logrus.Errorf("[NSKeyCollector] CollectAny: %s", err)
@@ -37,7 +37,7 @@ func (kc *NSKeyCollector) CollectAny(doc interface{}) {
 	kc.CollectJSON(string(jsonStr))
 }
 
-func (kc *NSKeyCollector) CollectJSON(jsonStr string) {
+func (kc *TableFieldCollector) CollectJSON(jsonStr string) {
 	doc := make(map[string]interface{})
 	err := json.Unmarshal([]byte(jsonStr), &doc)
 	if err != nil {
@@ -47,7 +47,7 @@ func (kc *NSKeyCollector) CollectJSON(jsonStr string) {
 	kc.Collect(doc)
 }
 
-func (kc *NSKeyCollector) Collect(doc map[string]interface{}) {
+func (kc *TableFieldCollector) Collect(doc map[string]interface{}) {
 	keys := GetAllKeys(doc, false)
 
 	kc.mu.Lock()
@@ -58,7 +58,7 @@ func (kc *NSKeyCollector) Collect(doc map[string]interface{}) {
 	}
 }
 
-func (kc *NSKeyCollector) GetKeys() []string {
+func (kc *TableFieldCollector) GetKeys() []string {
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
 
@@ -70,8 +70,8 @@ func (kc *NSKeyCollector) GetKeys() []string {
 	return keys
 }
 
-func (kc *NSKeyCollector) GetNS() string {
-	return kc.ns
+func (kc *TableFieldCollector) GetTable() string {
+	return kc.table
 }
 
 func GetAllKeysFromJSON(jsonStr string) []string {

@@ -9,7 +9,7 @@ import (
 )
 
 func TestViewBuilder_Build(t *testing.T) {
-	vb := NewViewBuilder("test_table", "test_table_view", NewMockNSKeyCollector("test_ns", []string{"id", "name"}))
+	vb := NewViewBuilder("test_table", "test_table_view", NewMockTableFieldCollector("test_table", []string{"id", "name"}))
 	sql, err := vb.Build()
 	assert.Nil(t, err)
 	fmt.Println(sql)
