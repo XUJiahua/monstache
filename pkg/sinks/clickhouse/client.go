@@ -4,21 +4,28 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
+
 	"github.com/pkg/errors"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"github.com/sirupsen/logrus"
-	"io"
-	"net/http"
-	"net/url"
 )
 
 type Config struct {
 	Enabled bool `toml:"enabled"`
 	// example: http://localhost:8123
 	Endpoint string `toml:"endpoint"`
+	// localhost:9000
+	EndpointTCP string `toml:"endpoint-tcp"`
 	// Sets `input_format_skip_unknown_fields`, allowing ClickHouse to discard fields not present in the table schema.
 	SkipUnknownFields bool `toml:"skip-unknown-fields"`
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
@@ -44,7 +51,10 @@ type Auth struct {
 
 type Client struct {
 	httpClient *http.Client
+	db         *sql.DB
 	config     Config
+	// note: 请在停止 monstache 后删除表结构
+	tablesCache map[string]struct{}
 }
 
 func (c Client) EmbedDoc() bool {
@@ -56,18 +66,26 @@ func (c Client) Name() string {
 }
 
 func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
-	docsByNS := make(map[string][]interface{})
+	docsByTable := make(map[string][]interface{})
+	var tables []string
 	for _, request := range requests {
 		ns := request.GetNamespace()
-		if docs, ok := docsByNS[ns]; ok {
-			docsByNS[ns] = append(docs, request.GetDoc())
-		} else {
-			docsByNS[ns] = []interface{}{request.GetDoc()}
-		}
-	}
-	for ns, docs := range docsByNS {
-		// note: make sure table exists
 		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
+		if docs, ok := docsByTable[table]; ok {
+			docsByTable[table] = append(docs, request.GetDoc())
+		} else {
+			docsByTable[table] = []interface{}{request.GetDoc()}
+		}
+
+		tables = append(tables, table)
+	}
+
+	// make sure table exists
+	if err := c.EnsureTableExists(ctx, tables); err != nil {
+		return err
+	}
+
+	for table, docs := range docsByTable {
 		if err := c.BatchInsert(ctx, c.config.Database, table, docs); err != nil {
 			return err
 		}
@@ -76,10 +94,37 @@ func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) err
 }
 
 func NewClient(config Config) *Client {
+	db := clickhouse.OpenDB(&clickhouse.Options{
+		Addr: []string{config.EndpointTCP},
+		Auth: clickhouse.Auth{
+			Database: "default",
+			Username: config.Auth.User,
+			Password: config.Auth.Password,
+		},
+		// TLS: &tls.Config{
+		// 	InsecureSkipVerify: true,
+		// },
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+		DialTimeout: time.Second * 30,
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		Debug:                false,
+		BlockBufferSize:      10,
+		MaxCompressionBuffer: 10240,
+	})
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+	db.SetConnMaxLifetime(time.Hour)
+
 	return &Client{
 		// fixme: a better settings
-		httpClient: http.DefaultClient,
-		config:     config,
+		httpClient:  http.DefaultClient,
+		config:      config,
+		db:          db,
+		tablesCache: make(map[string]struct{}),
 	}
 }
 
