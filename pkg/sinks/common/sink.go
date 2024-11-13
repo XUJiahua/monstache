@@ -59,7 +59,7 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 		transformConfig.SyncTimeFieldName = "__sync_time"
 	}
 	if transformConfig.EmbedDocFieldName == "" {
-		transformConfig.EmbedDocFieldName = "doc"
+		transformConfig.EmbedDocFieldName = "__doc"
 	}
 
 	sink := &Sink{
