@@ -59,15 +59,15 @@ type Client struct {
 	mu          sync.Mutex
 }
 
-func (c Client) EmbedDoc() bool {
+func (c *Client) EmbedDoc() bool {
 	return true
 }
 
-func (c Client) Name() string {
+func (c *Client) Name() string {
 	return "clickhouse"
 }
 
-func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
+func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
 	docsByTable := make(map[string][]interface{})
 	var tables []string
 	for _, request := range requests {
@@ -132,7 +132,7 @@ func NewClient(config Config) *Client {
 
 // BatchInsert
 // https://clickhouse.com/docs/en/faq/integration/json-import
-func (c Client) BatchInsert(ctx context.Context, database, table string, rows []interface{}) error {
+func (c *Client) BatchInsert(ctx context.Context, database, table string, rows []interface{}) error {
 	// build request
 	u, err := url.Parse(c.config.Endpoint)
 	if err != nil {
