@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -23,13 +24,12 @@ type Config struct {
 	// Sets `date_time_input_format` to `best_effort`, allowing ClickHouse to properly parse RFC3339/ISO 8601.
 	DateTimeBestEffort bool `toml:"date-time-best-effort"`
 	Auth               Auth `toml:"auth"`
-	// mongodb op namespace (database.collection) -> clickhouse namespace (database.table)
-	Sinks map[string]Namespace `toml:"sinks"`
-}
-
-type Namespace struct {
+	// Only one database per config
 	Database string `toml:"database"`
-	Table    string `toml:"table"`
+	// prefix table name hkg_
+	TablePrefix string `toml:"table-prefix"`
+	// suffix table name, e.g., _v1
+	TableSuffix string `toml:"table-suffix"`
 }
 
 // Auth
@@ -66,12 +66,10 @@ func (c Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) err
 		}
 	}
 	for ns, docs := range docsByNS {
-		if target, ok := c.config.Sinks[ns]; ok {
-			if err := c.BatchInsert(ctx, target.Database, target.Table, docs); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("clickhouse sink is not properly set for namespace %s", ns)
+		// note: make sure table exists
+		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
+		if err := c.BatchInsert(ctx, c.config.Database, table, docs); err != nil {
+			return err
 		}
 	}
 	return nil
