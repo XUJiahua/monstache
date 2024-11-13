@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -55,6 +56,7 @@ type Client struct {
 	config     Config
 	// note: 请在停止 monstache 后删除表结构
 	tablesCache map[string]struct{}
+	mu          sync.Mutex
 }
 
 func (c Client) EmbedDoc() bool {

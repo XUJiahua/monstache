@@ -39,6 +39,9 @@ ORDER BY
 }
 
 func (c *Client) EnsureTableExists(ctx context.Context, tables []string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	database := c.config.Database
 	logrus.Debugf("ensure tables exists: %v", tables)
 	tableNames := lo.Filter(tables, func(table string, _ int) bool {
