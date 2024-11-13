@@ -3,13 +3,14 @@ package bulk
 import (
 	"context"
 	"fmt"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sync"
-	"testing"
-	"time"
 )
 
 type MockRequest struct{}
@@ -31,6 +32,16 @@ func (m MockRequest) GetDoc() interface{} {
 
 type MockClient struct {
 	i int
+}
+
+// EmbedDoc implements Client.
+func (m *MockClient) EmbedDoc() bool {
+	return false
+}
+
+// Name implements Client.
+func (m *MockClient) Name() string {
+	return "mock"
 }
 
 func (m *MockClient) Commit(ctx context.Context, requests []BulkableRequest) error {
@@ -78,6 +89,14 @@ func (m *MockClient2) Commit(ctx context.Context, requests []BulkableRequest) er
 
 	fmt.Printf("[%d]commit %d requests\n", m.i, len(requests))
 	return nil
+}
+
+func (m *MockClient2) EmbedDoc() bool {
+	return false
+}
+
+func (m *MockClient2) Name() string {
+	return "mock2"
 }
 
 func init() {
