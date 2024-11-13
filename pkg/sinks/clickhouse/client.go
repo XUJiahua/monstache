@@ -57,6 +57,7 @@ type Client struct {
 	// note: 请在停止 monstache 后删除表结构
 	tablesCache map[string]struct{}
 	mu          sync.Mutex
+	viewManager *view.Manager
 }
 
 func (c *Client) EmbedDoc() bool {
@@ -80,6 +81,8 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 		}
 
 		tables = append(tables, table)
+		// collect view fields
+		c.viewManager.Collect(table, request.GetDoc())
 	}
 
 	// make sure table exists
@@ -121,12 +124,16 @@ func NewClient(config Config) *Client {
 	db.SetMaxOpenConns(10)
 	db.SetConnMaxLifetime(time.Hour)
 
+	viewManager := view.NewManager()
+	viewManager.Start()
+
 	return &Client{
 		// fixme: a better settings
 		httpClient:  http.DefaultClient,
 		config:      config,
 		db:          db,
 		tablesCache: make(map[string]struct{}),
+		viewManager: viewManager,
 	}
 }
 
