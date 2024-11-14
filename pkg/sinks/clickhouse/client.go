@@ -100,7 +100,7 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 	return nil
 }
 
-func NewClient(config Config) *Client {
+func NewClient(config Config) (*Client, view.Manager) {
 	db := clickhouse.OpenDB(&clickhouse.Options{
 		Addr: []string{config.EndpointTCP},
 		Auth: clickhouse.Auth{
@@ -141,7 +141,7 @@ func NewClient(config Config) *Client {
 		db:          db,
 		tablesCache: make(map[string]struct{}),
 		viewManager: viewManager,
-	}
+	}, viewManager
 }
 
 // BatchInsert

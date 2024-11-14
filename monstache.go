@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"io/ioutil"
 	"log"
 	"math"
@@ -181,6 +182,7 @@ type indexClient struct {
 	cleanOnExit        []sinks.Closer
 	lastId             interface{} // save the id if full sync
 	lastIdSaved        interface{}
+	viewManager        view.Manager
 }
 
 // RouteData save to elasticsearch
@@ -312,6 +314,8 @@ type httpServerCtx struct {
 	shutdown   bool
 	started    time.Time
 	statusReqC chan *statusRequest
+
+	viewManager view.Manager
 }
 
 type instanceStatus struct {
@@ -4254,6 +4258,9 @@ func (ctx *httpServerCtx) serveHTTP() {
 
 func (ctx *httpServerCtx) buildServer() {
 	mux := http.NewServeMux()
+	if ctx.viewManager != nil {
+		ctx.viewManager.BuildRoutes(mux)
+	}
 	mux.HandleFunc("/started", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		data := time.Since(ctx.started).String()
@@ -4470,9 +4477,10 @@ func (ic *indexClient) startHTTPServer() {
 	config := ic.config
 	if config.EnableHTTPServer {
 		ic.hsc = &httpServerCtx{
-			bulk:       ic.bulk,
-			config:     ic.config,
-			statusReqC: ic.statusReqC,
+			bulk:        ic.bulk,
+			config:      ic.config,
+			statusReqC:  ic.statusReqC,
+			viewManager: ic.viewManager,
 		}
 		ic.hsc.buildServer()
 		go ic.hsc.serveHTTP()
@@ -5518,13 +5526,14 @@ func main() {
 	afterBulk := ic.afterBulkCommon()
 	// enable http mode for clickhouse if enable oplog
 	config.SinkConfig.ClickHouseConfig.Http = config.EnableOplog
-	sinkConnector, closers, err := sinks.CreateSink(config.SinkConfig, afterBulk)
+	sinkConnector, viewManager, closers, err := sinks.CreateSink(config.SinkConfig, afterBulk)
 	if err != nil {
 		errorLog.Fatalf("failed to create sink connector: %v", err)
 	}
 	if sinkConnector != nil {
 		ic.sinkConnector = sinkConnector
 		ic.cleanOnExit = closers
+		ic.viewManager = viewManager
 	} else {
 		elasticClient := buildElasticClient(config)
 		ic.client = elasticClient

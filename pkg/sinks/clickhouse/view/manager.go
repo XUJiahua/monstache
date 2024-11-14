@@ -82,5 +82,5 @@ func (m *ViewManager) views() ([]string, error) {
 }
 
 func (m *ViewManager) BuildRoutes(mux *http.ServeMux) {
-
+	// todo: route to return all view ddl
 }
