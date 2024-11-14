@@ -2,6 +2,7 @@ package view
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -82,5 +83,13 @@ func (m *ViewManager) views() ([]string, error) {
 }
 
 func (m *ViewManager) BuildRoutes(mux *http.ServeMux) {
-	// todo: route to return all view ddl
+	mux.HandleFunc("/views", func(w http.ResponseWriter, r *http.Request) {
+		views, err := m.views()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(strings.Join(views, "\n\n\n")))
+	})
 }
