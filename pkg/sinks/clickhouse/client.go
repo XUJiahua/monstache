@@ -84,7 +84,7 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 
 		tables = append(tables, table)
 		// collect view fields
-		c.viewManager.Collect(table, request.GetDoc())
+		c.viewManager.Collect(fmt.Sprintf("%s.%s", c.config.Database, table), request.GetDoc())
 	}
 
 	// make sure table exists
