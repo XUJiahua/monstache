@@ -38,6 +38,8 @@ type Config struct {
 	TablePrefix string `toml:"table-prefix"`
 	// suffix table name, e.g., _v1
 	TableSuffix string `toml:"table-suffix"`
+	// enable http mode, show table views
+	Http bool `toml:"http"`
 }
 
 // Auth
@@ -57,7 +59,7 @@ type Client struct {
 	// note: 请在停止 monstache 后删除表结构
 	tablesCache map[string]struct{}
 	mu          sync.Mutex
-	viewManager *view.Manager
+	viewManager view.Manager
 }
 
 func (c *Client) EmbedDoc() bool {
@@ -124,7 +126,12 @@ func NewClient(config Config) *Client {
 	db.SetMaxOpenConns(10)
 	db.SetConnMaxLifetime(time.Hour)
 
-	viewManager := view.NewManager()
+	var viewManager view.Manager
+	if config.Http {
+		viewManager = view.NewViewManager()
+	} else {
+		viewManager = &view.MockManager{}
+	}
 	viewManager.Start()
 
 	return &Client{

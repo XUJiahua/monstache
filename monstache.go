@@ -11,11 +11,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rwynn/monstache/v6/pkg/metrics"
-	"github.com/rwynn/monstache/v6/pkg/sinks"
-	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"
 	"math"
@@ -35,6 +30,12 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
+	"github.com/rwynn/monstache/v6/pkg/sinks"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
+	"github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -5515,6 +5516,8 @@ func main() {
 	}
 	// use global backoff to slow down source (oplog) and sink (bulk worker) if bulk commit failed
 	afterBulk := ic.afterBulkCommon()
+	// enable http mode for clickhouse if enable oplog
+	config.SinkConfig.ClickHouseConfig.Http = config.EnableOplog
 	sinkConnector, closers, err := sinks.CreateSink(config.SinkConfig, afterBulk)
 	if err != nil {
 		errorLog.Fatalf("failed to create sink connector: %v", err)

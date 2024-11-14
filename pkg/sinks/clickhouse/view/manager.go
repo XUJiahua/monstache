@@ -1,6 +1,7 @@
 package view
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -11,18 +12,31 @@ type Element struct {
 	doc   interface{}
 }
 
-type Manager struct {
+// MockManager do nothing
+type MockManager struct{}
+
+func (m *MockManager) Start()                                {}
+func (m *MockManager) Collect(table string, doc interface{}) {}
+func (m *MockManager) BuildRoutes(mux *http.ServeMux)        {}
+
+type Manager interface {
+	Start()
+	Collect(table string, doc interface{})
+	BuildRoutes(mux *http.ServeMux)
+}
+
+type ViewManager struct {
 	mu         sync.Mutex
 	collectors map[string]*TableFieldCollector
 	queue      chan Element
 }
 
-// NewManager
-func NewManager() *Manager {
-	return &Manager{collectors: make(map[string]*TableFieldCollector), queue: make(chan Element, 1024)}
+// NewViewManager
+func NewViewManager() *ViewManager {
+	return &ViewManager{collectors: make(map[string]*TableFieldCollector), queue: make(chan Element, 1024)}
 }
 
-func (m *Manager) Start() {
+func (m *ViewManager) Start() {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -36,12 +50,12 @@ func (m *Manager) Start() {
 	}()
 }
 
-func (m *Manager) Collect(table string, doc interface{}) {
+func (m *ViewManager) Collect(table string, doc interface{}) {
 	element := Element{table: table, doc: doc}
 	m.queue <- element
 }
 
-func (m *Manager) collect(table string, doc interface{}) {
+func (m *ViewManager) collect(table string, doc interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.collectors[table]; !ok {
@@ -51,7 +65,7 @@ func (m *Manager) collect(table string, doc interface{}) {
 	m.collectors[table].CollectAny(doc)
 }
 
-func (m *Manager) Views() ([]string, error) {
+func (m *ViewManager) views() ([]string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -65,4 +79,8 @@ func (m *Manager) Views() ([]string, error) {
 		views = append(views, sql)
 	}
 	return views, nil
+}
+
+func (m *ViewManager) BuildRoutes(mux *http.ServeMux) {
+
 }
