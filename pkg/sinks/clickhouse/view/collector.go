@@ -105,8 +105,9 @@ func getAllKeys(doc map[string]interface{}, prefix string) []string {
 			nestedKeys := getAllKeys(nestedDoc, fmt.Sprintf("%s.", k))
 			keys = append(keys, nestedKeys...)
 		default:
-			// currently do not support array
-			logrus.Debugf("[getAllKeys] Unsupported type: %T", v)
+			// currently do not support array, nil
+			// probably need to convert array to string
+			//logrus.Debugf("[getAllKeys] Unsupported type: %T", v)
 		}
 	}
 
