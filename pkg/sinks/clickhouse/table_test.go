@@ -14,7 +14,7 @@ func init() {
 }
 
 func TestClient_EnsureTableExists(t *testing.T) {
-	c := NewClient(Config{
+	c, _ := NewClient(Config{
 		Enabled:            false,
 		EndpointTCP:        "10.30.11.112:9000",
 		SkipUnknownFields:  false,
