@@ -161,7 +161,9 @@ func (c *Client) BatchInsert(ctx context.Context, database, table string, rows [
 	if c.config.DateTimeBestEffort {
 		params.Set("date_time_input_format", "best_effort")
 	}
-	query := fmt.Sprintf("INSERT INTO `%s`.`%s` FORMAT JSONEachRow", database, table)
+
+	tableFullname := fmt.Sprintf("`%s`.`%s`", database, table)
+	query := fmt.Sprintf("INSERT INTO %s FORMAT JSONEachRow", tableFullname)
 	params.Set("query", query)
 
 	u.RawQuery = params.Encode()
@@ -216,11 +218,10 @@ func (c *Client) BatchInsert(ctx context.Context, database, table string, rows [
 	}
 	result := string(data)
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Error response from ClickHouse: %s\n", resp.Status)
-		return fmt.Errorf("%s", result)
-	} else {
-		fmt.Println("Data uploaded successfully")
+		logrus.Warnf("TBALE [%s] Error response from ClickHouse: %s", tableFullname, resp.Status)
+		return fmt.Errorf("TABLE [%s]%s", tableFullname, result)
 	}
 
+	logrus.Debugf("Data uploaded successfully")
 	return nil
 }
