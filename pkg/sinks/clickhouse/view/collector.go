@@ -109,6 +109,32 @@ func NewMapTraveler() *MapTraveler {
 	}
 }
 
+func getUniqueValues(m map[string]string) []string {
+	valueSet := make(map[string]struct{})
+	for _, v := range m {
+		valueSet[v] = struct{}{}
+	}
+
+	var values []string
+	for k := range valueSet {
+		values = append(values, k)
+	}
+
+	sort.Strings(values)
+
+	return values
+}
+
+// HandledTypes not including array, object but their children
+func (t *MapTraveler) HandledTypes() []string {
+	return getUniqueValues(t.result)
+}
+
+// UnhandledTypes expect only nil
+func (t *MapTraveler) UnhandledTypes() []string {
+	return getUniqueValues(t.notCollected)
+}
+
 func (t *MapTraveler) handleArray(array []interface{}, prefix string) {
 	for _, elem := range array {
 		// sample every element, collect every fields
@@ -117,7 +143,7 @@ func (t *MapTraveler) handleArray(array []interface{}, prefix string) {
 		case string, int, int32, int64, float32, float64, bool:
 			t.result[k] = fmt.Sprintf("%T", elem)
 		case map[string]interface{}:
-			t.getAllKeys(elem, fmt.Sprintf("%s", k))
+			t.getAllKeys(elem, fmt.Sprintf("%s.", k))
 		default:
 			t.notCollected[k] = fmt.Sprintf("%T", elem)
 		}
@@ -132,12 +158,14 @@ func (t *MapTraveler) getAllKeys(doc map[string]interface{}, prefix string) {
 			t.result[k] = fmt.Sprintf("%T", elem)
 		case map[string]interface{}:
 			t.getAllKeys(elem, fmt.Sprintf("%s.", k))
-		//case nil:
-		//	t.notCollected[k] = "nil"
 		case []interface{}:
-			t.handleArray(elem, fmt.Sprintf("%s[].", k))
+			t.handleArray(elem, fmt.Sprintf("%s[]", k))
 		default:
 			t.notCollected[k] = fmt.Sprintf("%T", elem)
 		}
 	}
+}
+
+func (t *MapTraveler) GetAllKeys(doc map[string]interface{}) {
+	t.getAllKeys(doc, "")
 }
