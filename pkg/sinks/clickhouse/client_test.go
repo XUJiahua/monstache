@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"os"
 	"strings"
@@ -73,21 +75,34 @@ func Test2(t *testing.T) {
 	data, err := os.ReadFile("NUMBER_OF_DIMENSIONS_MISMATCHED.ndjson")
 	require.NoError(t, err)
 	lines := strings.Split(string(data), "\n")
-	docs := lo.Map(lines, func(item string, index int) interface{} {
-		keys := view.GetAllKeysFromJSON(item)
-		fmt.Println(keys)
+	traveler := view.NewMapTraveler()
+	lo.Map(lines, func(item string, index int) int {
 		var doc map[string]interface{}
 		err := json.Unmarshal([]byte(item), &doc)
 		require.NoError(t, err)
 
-		m := make(map[string]interface{})
-		m["__doc"] = doc
-		return m
+		traveler.Collect(doc)
+
+		return 0
 	})
 
-	//for _, doc := range docs {
-	//	spew.Dump(doc)
-	//}
+	docs := lo.Map(lines, func(item string, index int) interface{} {
+		var doc map[string]interface{}
+		err := json.Unmarshal([]byte(item), &doc)
+		require.NoError(t, err)
+
+		// key point
+		traveler.AssignDefaultValues(doc)
+		//delete(doc, "supplemental_files")
+		// channel 有问题啊
+		//delete(doc, "channels")
+
+		m := make(map[string]interface{})
+		m["__doc"] = doc
+		uid, _ := uuid.NewUUID()
+		m["_id"] = uid.String()
+		return m
+	})
 
 	client, _ := NewClient(Config{
 		Endpoint:           "http://10.30.11.112:8123/",
@@ -100,8 +115,41 @@ func Test2(t *testing.T) {
 		},
 		Database: "evocloud",
 	})
-	//err = client.EnsureTableExists(context.TODO(), []string{"test_1234"})
-	//require.NoError(t, err)
+	err = client.EnsureTableExists(context.TODO(), []string{"test_1234"})
+	require.NoError(t, err)
 	err = client.BatchInsert(context.TODO(), "evocloud", "test_1234", docs)
 	require.NoError(t, err)
+}
+
+func TestAssignDefaultValues(t *testing.T) {
+	data, err := os.ReadFile("NUMBER_OF_DIMENSIONS_MISMATCHED.ndjson")
+	require.NoError(t, err)
+	lines := strings.Split(string(data), "\n")
+
+	// collect fields
+	traveler := view.NewMapTraveler()
+	lo.Map(lines, func(item string, index int) int {
+		var doc map[string]interface{}
+		err := json.Unmarshal([]byte(item), &doc)
+		require.NoError(t, err)
+
+		traveler.Collect(doc)
+		fmt.Printf("handled types: %v\n", traveler.HandledTypes())
+		fmt.Printf("unhandled types: %v\n", traveler.UnhandledTypes())
+
+		return 0
+	})
+
+	// assign default values
+	lo.Map(lines, func(item string, index int) int {
+		var doc map[string]interface{}
+		err := json.Unmarshal([]byte(item), &doc)
+		require.NoError(t, err)
+
+		traveler.AssignDefaultValues(doc)
+		spew.Dump(doc)
+
+		return 0
+	})
+
 }
