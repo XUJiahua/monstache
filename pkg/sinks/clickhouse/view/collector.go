@@ -98,14 +98,26 @@ func GetAllKeys(doc map[string]interface{}, sorting bool) []string {
 
 type MapTraveler struct {
 	// key and it's type
-	result       map[string]string
-	notCollected map[string]string
+	result        map[string]string
+	notCollected  map[string]string
+	defaultValues map[string]interface{}
 }
 
 func NewMapTraveler() *MapTraveler {
+	// string, int, int32, int64, float32, float64, bool
+	defaultValues := map[string]interface{}{
+		"string":  "",
+		"int":     0,
+		"int32":   int32(0),
+		"int64":   int64(0),
+		"float32": float32(0),
+		"float64": float64(0),
+		"bool":    false,
+	}
 	return &MapTraveler{
-		result:       make(map[string]string),
-		notCollected: make(map[string]string),
+		result:        make(map[string]string),
+		notCollected:  make(map[string]string),
+		defaultValues: defaultValues,
 	}
 }
 
@@ -166,6 +178,7 @@ func (t *MapTraveler) getAllKeys(doc map[string]interface{}, prefix string) {
 	}
 }
 
+// GetAllKeys assume top level is object, not array
 func (t *MapTraveler) GetAllKeys(doc map[string]interface{}) {
 	t.getAllKeys(doc, "")
 }
