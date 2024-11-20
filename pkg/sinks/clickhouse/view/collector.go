@@ -84,32 +84,60 @@ func GetAllKeysFromJSON(jsonStr string) []string {
 }
 
 func GetAllKeys(doc map[string]interface{}, sorting bool) []string {
-	keys := getAllKeys(doc, "")
+	traveler := NewMapTraveler()
+	traveler.getAllKeys(doc, "")
+	var keys []string
+	for k, _ := range traveler.result {
+		keys = append(keys, k)
+	}
 	if sorting {
 		sort.Strings(keys)
 	}
 	return keys
 }
 
-func getAllKeys(doc map[string]interface{}, prefix string) []string {
-	var keys []string
+type MapTraveler struct {
+	// key and it's type
+	result       map[string]string
+	notCollected map[string]string
+}
 
-	for k, v := range doc {
-		k = fmt.Sprintf("%s%s", prefix, k)
-		switch v := v.(type) {
+func NewMapTraveler() *MapTraveler {
+	return &MapTraveler{
+		result:       make(map[string]string),
+		notCollected: make(map[string]string),
+	}
+}
+
+func (t *MapTraveler) handleArray(array []interface{}, prefix string) {
+	for _, elem := range array {
+		// sample every element, collect every fields
+		k := prefix
+		switch elem := elem.(type) {
 		case string, int, int32, int64, float32, float64, bool:
-			// nil is not needed
-			keys = append(keys, k)
+			t.result[k] = fmt.Sprintf("%T", elem)
 		case map[string]interface{}:
-			nestedDoc := v
-			nestedKeys := getAllKeys(nestedDoc, fmt.Sprintf("%s.", k))
-			keys = append(keys, nestedKeys...)
+			t.getAllKeys(elem, fmt.Sprintf("%s", k))
 		default:
-			// currently do not support array, nil
-			// probably need to convert array to string
-			//logrus.Debugf("[getAllKeys] Unsupported type: %T", v)
+			t.notCollected[k] = fmt.Sprintf("%T", elem)
 		}
 	}
+}
 
-	return keys
+func (t *MapTraveler) getAllKeys(doc map[string]interface{}, prefix string) {
+	for k, elem := range doc {
+		k = fmt.Sprintf("%s%s", prefix, k)
+		switch elem := elem.(type) {
+		case string, int, int32, int64, float32, float64, bool:
+			t.result[k] = fmt.Sprintf("%T", elem)
+		case map[string]interface{}:
+			t.getAllKeys(elem, fmt.Sprintf("%s.", k))
+		//case nil:
+		//	t.notCollected[k] = "nil"
+		case []interface{}:
+			t.handleArray(elem, fmt.Sprintf("%s[].", k))
+		default:
+			t.notCollected[k] = fmt.Sprintf("%T", elem)
+		}
+	}
 }
