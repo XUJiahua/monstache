@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 
 	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"github.com/stretchr/testify/require"
@@ -75,25 +77,12 @@ func Test2(t *testing.T) {
 	data, err := os.ReadFile("NUMBER_OF_DIMENSIONS_MISMATCHED.ndjson")
 	require.NoError(t, err)
 	lines := strings.Split(string(data), "\n")
-	traveler := view.NewMapTraveler()
-	lo.Map(lines, func(item string, index int) int {
-		var doc map[string]interface{}
-		err := json.Unmarshal([]byte(item), &doc)
-		require.NoError(t, err)
-
-		traveler.Collect(doc)
-
-		return 0
-	})
 
 	docs := lo.Map(lines, func(item string, index int) interface{} {
 		var doc map[string]interface{}
 		err := json.Unmarshal([]byte(item), &doc)
 		require.NoError(t, err)
 
-		// key point
-		traveler.AssignDefaultValues(doc)
-		//delete(doc, "supplemental_files")
 		// channel 有问题啊
 		//delete(doc, "channels")
 
@@ -117,7 +106,7 @@ func Test2(t *testing.T) {
 	})
 	err = client.EnsureTableExists(context.TODO(), []string{"test_1234"})
 	require.NoError(t, err)
-	err = client.BatchInsert(context.TODO(), "evocloud", "test_1234", docs)
+	err = client.BatchInsertWithPreprocess(context.TODO(), "evocloud", "test_1234", docs)
 	require.NoError(t, err)
 }
 
@@ -127,7 +116,7 @@ func TestAssignDefaultValues(t *testing.T) {
 	lines := strings.Split(string(data), "\n")
 
 	// collect fields
-	traveler := view.NewMapTraveler()
+	traveler := view.NewMapTraveler(logrus.WithField("component", "TestAssignDefaultValues"))
 	lo.Map(lines, func(item string, index int) int {
 		var doc map[string]interface{}
 		err := json.Unmarshal([]byte(item), &doc)

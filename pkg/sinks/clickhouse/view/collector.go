@@ -101,23 +101,29 @@ type MapTraveler struct {
 	result        map[string]string
 	notCollected  map[string]string
 	defaultValues map[string]interface{}
+	logger        *logrus.Entry
 }
 
-func NewMapTraveler() *MapTraveler {
+func NewMapTraveler(logger *logrus.Entry) *MapTraveler {
+	logger = logger.WithField("component", "MapTraveler")
 	// string, int, int32, int64, float32, float64, bool
 	defaultValues := map[string]interface{}{
+		// string
 		"string":  "",
 		"int":     0,
 		"int32":   int32(0),
 		"int64":   int64(0),
 		"float32": float32(0),
+		// number
 		"float64": float64(0),
-		"bool":    false,
+		// true/false
+		"bool": false,
 	}
 	return &MapTraveler{
 		result:        make(map[string]string),
 		notCollected:  make(map[string]string),
 		defaultValues: defaultValues,
+		logger:        logger,
 	}
 }
 
@@ -161,7 +167,7 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 				// assign except top level
 				if globalTy, ok := t.result[globalKey]; ok {
 					if defaultValue, ok := t.defaultValues[globalTy]; ok {
-						logrus.Warnf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
+						t.logger.Warnf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
 						doc[k] = defaultValue
 					}
 				}

@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 
@@ -40,6 +41,10 @@ type Config struct {
 	TableSuffix string `toml:"table-suffix"`
 	// enable http mode, show table views
 	Http bool `toml:"http"`
+	// 所有匹配 regex 的 ns 的需要进行预处理
+	PreprocessNsRegex string `toml:"preprocess-namespace-regex"`
+	// 只预处理字符串，从 nil 转为 ""
+	PreprocessStringOnly bool `toml:"preprocess-string-only"`
 }
 
 // Auth
@@ -60,6 +65,8 @@ type Client struct {
 	tablesCache map[string]struct{}
 	mu          sync.Mutex
 	viewManager view.Manager
+
+	preprocessNsRE *regexp.Regexp
 }
 
 func (c *Client) EmbedDoc() bool {
@@ -71,11 +78,15 @@ func (c *Client) Name() string {
 }
 
 func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
+	// group docs by table
 	docsByTable := make(map[string][]interface{})
+	nsByTable := make(map[string]string)
 	var tables []string
 	for _, request := range requests {
 		ns := request.GetNamespace()
 		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
+		nsByTable[table] = ns
+
 		if docs, ok := docsByTable[table]; ok {
 			docsByTable[table] = append(docs, request.GetDoc())
 		} else {
@@ -93,14 +104,27 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 	}
 
 	for table, docs := range docsByTable {
-		if err := c.BatchInsert(ctx, c.config.Database, table, docs); err != nil {
-			return err
+		ns := nsByTable[table]
+		preprocess := c.NeedPreprocess(ns)
+		if preprocess {
+			if err := c.BatchInsertWithPreprocess(ctx, c.config.Database, table, docs); err != nil {
+				return err
+			}
+		} else {
+			if err := c.BatchInsert(ctx, c.config.Database, table, docs); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func NewClient(config Config) (*Client, view.Manager) {
+	var preprocessNsRE *regexp.Regexp
+	if config.PreprocessNsRegex != "" {
+		preprocessNsRE = regexp.MustCompile(config.PreprocessNsRegex)
+	}
+
 	db := clickhouse.OpenDB(&clickhouse.Options{
 		Addr: []string{config.EndpointTCP},
 		Auth: clickhouse.Auth{
@@ -136,12 +160,67 @@ func NewClient(config Config) (*Client, view.Manager) {
 
 	return &Client{
 		// fixme: a better settings
-		httpClient:  http.DefaultClient,
-		config:      config,
-		db:          db,
-		tablesCache: make(map[string]struct{}),
-		viewManager: viewManager,
+		httpClient:     http.DefaultClient,
+		config:         config,
+		db:             db,
+		tablesCache:    make(map[string]struct{}),
+		viewManager:    viewManager,
+		preprocessNsRE: preprocessNsRE,
 	}, viewManager
+}
+
+func (c *Client) NeedPreprocess(ns string) bool {
+	if c.preprocessNsRE != nil {
+		return c.preprocessNsRE.MatchString(ns)
+	}
+
+	return false
+}
+
+// preprocessBatch 需要保证同一个批次下的数据结构一致
+func preprocessBatch(rows []interface{}, logger *logrus.Entry) ([]map[string]interface{}, error) {
+	var newRows []map[string]interface{}
+
+	// collect fields
+	traveler := view.NewMapTraveler(logger)
+	for _, row := range rows {
+		data, err := json.Marshal(row)
+		if err != nil {
+			return nil, err
+		}
+		var doc map[string]interface{}
+		err = json.Unmarshal(data, &doc)
+		if err != nil {
+			return nil, err
+		}
+
+		traveler.Collect(doc)
+		newRows = append(newRows, doc)
+	}
+
+	for _, row := range newRows {
+		traveler.AssignDefaultValues(row)
+	}
+
+	return newRows, nil
+}
+
+// BatchInsertWithPreprocess wrapper of BatchInsert, preprocess rows before inserting
+func (c *Client) BatchInsertWithPreprocess(ctx context.Context, database, table string, rows []interface{}) error {
+	logger := logrus.WithFields(logrus.Fields{
+		"database": database,
+		"table":    table,
+	})
+	newRows, err := preprocessBatch(rows, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to preprocess batch")
+	}
+	var docs []interface{}
+	for _, doc := range newRows {
+		docs = append(docs, doc)
+	}
+
+	return c.BatchInsert(ctx, database, table, docs)
 }
 
 // BatchInsert
