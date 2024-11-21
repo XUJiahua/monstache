@@ -3,34 +3,30 @@ package view
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
 )
 
 type TableFieldCollector struct {
-	table string
-	mu    sync.Mutex
-	keys  map[string]struct{}
-}
-
-func NewMockTableFieldCollector(table string, keys []string) *TableFieldCollector {
-	keysMap := make(map[string]struct{})
-	for _, k := range keys {
-		keysMap[k] = struct{}{}
-	}
-	return &TableFieldCollector{table: table, keys: keysMap}
+	table    string
+	mu       sync.Mutex
+	traveler *MapTraveler
+	logger   *logrus.Entry
 }
 
 func NewTableFieldCollector(table string) *TableFieldCollector {
-	keys := make(map[string]struct{})
-	return &TableFieldCollector{keys: keys, table: table}
+	logger := logrus.WithField("table", table).WithField("component", "TableFieldCollector")
+	traveler := NewMapTraveler(logger)
+	return &TableFieldCollector{traveler: traveler, table: table, logger: logger}
 }
 
+// CollectAny any that can be converted to JSON
 func (kc *TableFieldCollector) CollectAny(doc interface{}) {
 	jsonStr, err := json.Marshal(doc)
 	if err != nil {
-		logrus.Errorf("[NSKeyCollector] CollectAny: %s", err)
+		kc.logger.Errorf("[NSKeyCollector] CollectAny: %s", err)
 		return
 	}
 	kc.CollectJSON(string(jsonStr))
@@ -40,30 +36,30 @@ func (kc *TableFieldCollector) CollectJSON(jsonStr string) {
 	doc := make(map[string]interface{})
 	err := json.Unmarshal([]byte(jsonStr), &doc)
 	if err != nil {
-		logrus.Errorf("[NSKeyCollector] CollectJSON: %s", err)
+		kc.logger.Errorf("[NSKeyCollector] CollectJSON: %s", err)
 		return
 	}
 	kc.Collect(doc)
 }
 
 func (kc *TableFieldCollector) Collect(doc map[string]interface{}) {
-	keys := GetAllKeys(doc, false)
-
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
-	for _, k := range keys {
-		// just overwrite if exists
-		kc.keys[k] = struct{}{}
-	}
+
+	kc.traveler.Collect(doc)
 }
 
 func (kc *TableFieldCollector) GetKeys() []string {
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
 
-	keys := make([]string, 0, len(kc.keys))
-	for k := range kc.keys {
-		keys = append(keys, k)
+	var keys []string
+	for key, _ := range kc.traveler.result {
+		// not include array type
+		if strings.Contains(key, "[]") {
+			continue
+		}
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	return keys

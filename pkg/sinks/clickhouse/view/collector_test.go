@@ -70,7 +70,9 @@ func TestGetAllKeysFromJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetAllKeysFromJSON(tt.args.jsonStr); !reflect.DeepEqual(got, tt.want) {
+			collector := NewTableFieldCollector("mock_table")
+			collector.CollectJSON(tt.args.jsonStr)
+			if got := collector.GetKeys(); !reflect.DeepEqual(got, tt.want) {
 				DumpSlice(got)
 				t.Errorf("GetAllKeysFromJSON() = %v, want %v", got, tt.want)
 			}
