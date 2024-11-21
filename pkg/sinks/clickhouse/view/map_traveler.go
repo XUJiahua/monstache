@@ -2,8 +2,9 @@ package view
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"sort"
+
+	"github.com/sirupsen/logrus"
 )
 
 type MapTraveler struct {
@@ -12,14 +13,25 @@ type MapTraveler struct {
 	notCollected  map[string]string
 	defaultValues map[string]interface{}
 	logger        *logrus.Entry
+	// only replace string type with default value
+	stringOnly bool
 }
 
-func NewMapTraveler(logger *logrus.Entry) *MapTraveler {
-	if logger == nil {
-		logger = logrus.WithField("component", "MapTraveler")
-	} else {
-		logger = logger.WithField("component", "MapTraveler")
+type MapTravelerOption func(*MapTraveler)
+
+func WithLogger(logger *logrus.Entry) MapTravelerOption {
+	return func(t *MapTraveler) {
+		t.logger = logger
 	}
+}
+
+func WithStringOnly(stringOnly bool) MapTravelerOption {
+	return func(t *MapTraveler) {
+		t.stringOnly = stringOnly
+	}
+}
+
+func NewMapTraveler(opts ...MapTravelerOption) *MapTraveler {
 	// string, int, int32, int64, float32, float64, bool
 	defaultValues := map[string]interface{}{
 		// string
@@ -33,12 +45,24 @@ func NewMapTraveler(logger *logrus.Entry) *MapTraveler {
 		// true/false
 		"bool": false,
 	}
-	return &MapTraveler{
+	traveler := &MapTraveler{
 		result:        make(map[string]string),
 		notCollected:  make(map[string]string),
 		defaultValues: defaultValues,
-		logger:        logger,
+		logger:        nil,
+		stringOnly:    false,
 	}
+	for _, opt := range opts {
+		opt(traveler)
+	}
+
+	if traveler.logger == nil {
+		traveler.logger = logrus.WithField("component", "MapTraveler")
+	} else {
+		traveler.logger = traveler.logger.WithField("component", "MapTraveler")
+	}
+
+	return traveler
 }
 
 func (t *MapTraveler) travelArray(array []interface{}, prefix string, collect bool, level int) {
@@ -81,6 +105,9 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 				// assign except top level
 				if globalTy, ok := t.result[globalKey]; ok {
 					if defaultValue, ok := t.defaultValues[globalTy]; ok {
+						if t.stringOnly && globalTy != "string" {
+							continue
+						}
 						t.logger.Warnf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
 						doc[k] = defaultValue
 					}

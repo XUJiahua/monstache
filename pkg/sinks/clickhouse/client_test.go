@@ -10,10 +10,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
-
 	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,7 +114,7 @@ func TestAssignDefaultValues(t *testing.T) {
 	lines := strings.Split(string(data), "\n")
 
 	// collect fields
-	traveler := view.NewMapTraveler(logrus.WithField("component", "TestAssignDefaultValues"))
+	traveler := view.NewMapTraveler()
 	lo.Map(lines, func(item string, index int) int {
 		var doc map[string]interface{}
 		err := json.Unmarshal([]byte(item), &doc)

@@ -18,7 +18,7 @@ type TableFieldCollector struct {
 
 func NewTableFieldCollector(table string) *TableFieldCollector {
 	logger := logrus.WithField("table", table).WithField("component", "TableFieldCollector")
-	traveler := NewMapTraveler(logger)
+	traveler := NewMapTraveler()
 	return &TableFieldCollector{traveler: traveler, table: table, logger: logger}
 }
 
@@ -67,26 +67,4 @@ func (kc *TableFieldCollector) GetKeys() []string {
 
 func (kc *TableFieldCollector) GetTable() string {
 	return kc.table
-}
-
-func GetAllKeysFromJSON(jsonStr string) []string {
-	var doc map[string]interface{}
-	err := json.Unmarshal([]byte(jsonStr), &doc)
-	if err != nil {
-		return nil
-	}
-	return GetAllKeys(doc, true)
-}
-
-func GetAllKeys(doc map[string]interface{}, sorting bool) []string {
-	traveler := NewMapTraveler(nil)
-	traveler.Collect(doc)
-	var keys []string
-	for k, _ := range traveler.result {
-		keys = append(keys, k)
-	}
-	if sorting {
-		sort.Strings(keys)
-	}
-	return keys
 }

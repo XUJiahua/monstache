@@ -178,11 +178,11 @@ func (c *Client) NeedPreprocess(ns string) bool {
 }
 
 // preprocessBatch 需要保证同一个批次下的数据结构一致
-func preprocessBatch(rows []interface{}, logger *logrus.Entry) ([]map[string]interface{}, error) {
+func preprocessBatch(rows []interface{}, logger *logrus.Entry, stringOnly bool) ([]map[string]interface{}, error) {
 	var newRows []map[string]interface{}
 
 	// collect fields
-	traveler := view.NewMapTraveler(logger)
+	traveler := view.NewMapTraveler(view.WithLogger(logger), view.WithStringOnly(stringOnly))
 	for _, row := range rows {
 		data, err := json.Marshal(row)
 		if err != nil {
@@ -211,7 +211,7 @@ func (c *Client) BatchInsertWithPreprocess(ctx context.Context, database, table 
 		"database": database,
 		"table":    table,
 	})
-	newRows, err := preprocessBatch(rows, logger)
+	newRows, err := preprocessBatch(rows, logger, c.config.PreprocessStringOnly)
 	if err != nil {
 		return errors.Wrap(err, "failed to preprocess batch")
 	}
