@@ -84,7 +84,7 @@ func GetAllKeysFromJSON(jsonStr string) []string {
 }
 
 func GetAllKeys(doc map[string]interface{}, sorting bool) []string {
-	traveler := NewMapTraveler()
+	traveler := NewMapTraveler(nil)
 	traveler.Collect(doc)
 	var keys []string
 	for k, _ := range traveler.result {
@@ -105,7 +105,11 @@ type MapTraveler struct {
 }
 
 func NewMapTraveler(logger *logrus.Entry) *MapTraveler {
-	logger = logger.WithField("component", "MapTraveler")
+	if logger == nil {
+		logger = logrus.WithField("component", "MapTraveler")
+	} else {
+		logger = logger.WithField("component", "MapTraveler")
+	}
 	// string, int, int32, int64, float32, float64, bool
 	defaultValues := map[string]interface{}{
 		// string
