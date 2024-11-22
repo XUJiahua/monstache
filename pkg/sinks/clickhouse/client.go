@@ -45,6 +45,8 @@ type Config struct {
 	PreprocessNsRegex string `toml:"preprocess-namespace-regex"`
 	// 只预处理字符串，从 nil 转为 ""
 	PreprocessStringOnly bool `toml:"preprocess-string-only"`
+	// dump errors
+	DumpOnError bool `toml:"dump-on-error"`
 }
 
 // Auth
@@ -105,13 +107,20 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 
 	for table, docs := range docsByTable {
 		ns := nsByTable[table]
+		database := c.config.Database
 		preprocess := c.NeedPreprocess(ns)
 		if preprocess {
-			if err := c.BatchInsertWithPreprocess(ctx, c.config.Database, table, docs); err != nil {
+			if err := c.BatchInsertWithPreprocess(ctx, database, table, docs); err != nil {
+				if c.config.DumpOnError {
+					Dump(ns, database, table, docs)
+				}
 				return err
 			}
 		} else {
-			if err := c.BatchInsert(ctx, c.config.Database, table, docs); err != nil {
+			if err := c.BatchInsert(ctx, database, table, docs); err != nil {
+				if c.config.DumpOnError {
+					Dump(ns, database, table, docs)
+				}
 				return err
 			}
 		}
