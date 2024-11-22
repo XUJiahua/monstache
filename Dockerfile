@@ -10,6 +10,8 @@ RUN apt-get update
 RUN apt-get install ca-certificates -y
 RUN update-ca-certificates
 
+WORKDIR /app
+
 # Copy the products
 COPY --from=golang /app/monstache /bin/monstache
 ENTRYPOINT ["/bin/monstache"]
