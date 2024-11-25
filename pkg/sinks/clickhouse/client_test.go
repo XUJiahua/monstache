@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 	"testing"
@@ -139,4 +140,39 @@ func TestAssignDefaultValues(t *testing.T) {
 		return 0
 	})
 
+}
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
+
+func Test3(t *testing.T) {
+	data, err := os.ReadFile("/Users/jiahua/Downloads/复现问题/settle.evo.pspOutgoing_evocloud_hkg_settle_evo_pspOutgoing_testv1_20241122054405.ndjson")
+	require.NoError(t, err)
+	lines := strings.Split(string(data), "\n")
+
+	docs := lo.Map(lines, func(item string, index int) interface{} {
+		var doc map[string]interface{}
+		err := json.Unmarshal([]byte(item), &doc)
+		require.NoError(t, err)
+
+		return doc
+	})
+
+	client, _ := NewClient(Config{
+		Endpoint:           "http://10.30.11.112:8123/",
+		EndpointTCP:        "10.30.11.112:9000",
+		SkipUnknownFields:  true,
+		DateTimeBestEffort: true,
+		Auth: Auth{
+			User:     "default",
+			Password: "",
+		},
+		Database:             "evocloud",
+		PreprocessStringOnly: true,
+	})
+	err = client.EnsureTableExists(context.TODO(), []string{"test_12345"})
+	require.NoError(t, err)
+	err = client.BatchInsertWithPreprocess(context.TODO(), "evocloud", "test_12345", docs)
+	require.NoError(t, err)
 }
