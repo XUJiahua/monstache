@@ -9,12 +9,34 @@ import (
 
 type MapTraveler struct {
 	// key and it's type
-	result        map[string]string
-	notCollected  map[string]string
+	result       map[string]string
+	notCollected map[string]string
+
+	objectTypeMap map[string]map[string]string
+
 	defaultValues map[string]interface{}
 	logger        *logrus.Entry
 	// only replace string type with default value
 	stringOnly bool
+}
+
+func (t *MapTraveler) recordObject(prefix, key, value string) {
+	if obj, ok := t.objectTypeMap[prefix]; ok {
+		obj[key] = value
+		t.objectTypeMap[prefix] = obj
+	} else {
+		obj := make(map[string]string)
+		obj[key] = value
+		t.objectTypeMap[prefix] = obj
+	}
+}
+
+func (t *MapTraveler) getObject(prefix string) map[string]string {
+	if obj, ok := t.objectTypeMap[prefix]; ok {
+		return obj
+	}
+
+	return nil
 }
 
 type MapTravelerOption func(*MapTraveler)
@@ -48,6 +70,7 @@ func NewMapTraveler(opts ...MapTravelerOption) *MapTraveler {
 	traveler := &MapTraveler{
 		result:        make(map[string]string),
 		notCollected:  make(map[string]string),
+		objectTypeMap: make(map[string]map[string]string),
 		defaultValues: defaultValues,
 		logger:        nil,
 		stringOnly:    false,
@@ -89,6 +112,8 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 	for k, elem := range doc {
 		globalKey := fmt.Sprintf("%s%s", prefix, k)
 		ty := fmt.Sprintf("%T", elem)
+		t.recordObject(prefix, k, ty)
+
 		switch elem := elem.(type) {
 		case string, int, int32, int64, float32, float64, bool:
 			if collect {
@@ -111,6 +136,24 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 						t.logger.Warnf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
 						doc[k] = defaultValue
 					}
+				}
+			}
+		}
+	}
+
+	if !collect {
+		obj := t.getObject(prefix)
+		for key, ty := range obj {
+			if _, ok := doc[key]; !ok {
+				// doc lacks of key, add default value
+				if defaultValue, ok := t.defaultValues[ty]; ok {
+					if t.stringOnly && ty != "string" {
+						continue
+					}
+					t.logger.Warnf("assign default value to key %s(%s)", key, ty)
+					doc[key] = defaultValue
+				} else {
+					t.logger.Warnf("no default value for key %s(%s)", key, ty)
 				}
 			}
 		}
@@ -152,4 +195,13 @@ func (t *MapTraveler) HandledTypes() []string {
 // UnhandledTypes expect only nil
 func (t *MapTraveler) UnhandledTypes() []string {
 	return getUniqueValues(t.notCollected)
+}
+
+func (t *MapTraveler) GetKeys() []string {
+	var keys []string
+	for k := range t.result {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
