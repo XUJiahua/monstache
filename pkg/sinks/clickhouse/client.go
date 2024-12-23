@@ -94,7 +94,6 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 			docsByTable[table] = []interface{}{request.GetDoc()}
 		}
 
-		tables = append(tables, table)
 		// collect view fields
 		c.viewManager.Collect(fmt.Sprintf("%s.%s", c.config.Database, table), request.GetDoc())
 	}
