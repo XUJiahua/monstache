@@ -259,7 +259,7 @@ func (c *Client) BatchInsert(ctx context.Context, database, table string, rows [
 
 	u.RawQuery = params.Encode()
 	finalURL := u.String()
-	logrus.Debugf("request URL: %s", finalURL)
+	logrus.Debugf("saving %d requests to %s via URL: %s", len(rows), tableFullname, finalURL)
 
 	// compression
 	// https://clickhouse.com/docs/en/interfaces/http#compression
@@ -313,6 +313,6 @@ func (c *Client) BatchInsert(ctx context.Context, database, table string, rows [
 		return fmt.Errorf("TABLE [%s]%s", tableFullname, result)
 	}
 
-	logrus.Debugf("Data uploaded successfully")
+	logrus.Debugf("saving %d requests to %s successfully", len(rows), tableFullname)
 	return nil
 }
