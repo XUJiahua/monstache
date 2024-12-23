@@ -83,7 +83,6 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 	// group docs by table
 	docsByTable := make(map[string][]interface{})
 	nsByTable := make(map[string]string)
-	var tables []string
 	for _, request := range requests {
 		ns := request.GetNamespace()
 		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
@@ -100,6 +99,10 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 		c.viewManager.Collect(fmt.Sprintf("%s.%s", c.config.Database, table), request.GetDoc())
 	}
 
+	var tables []string
+	for table, _ := range nsByTable {
+		tables = append(tables, table)
+	}
 	// make sure table exists
 	if err := c.EnsureTableExists(ctx, tables); err != nil {
 		return err
