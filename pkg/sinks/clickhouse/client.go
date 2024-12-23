@@ -237,6 +237,7 @@ func (c *Client) BatchInsertWithPreprocess(ctx context.Context, database, table 
 // BatchInsert
 // https://clickhouse.com/docs/en/faq/integration/json-import
 func (c *Client) BatchInsert(ctx context.Context, database, table string, rows []interface{}) error {
+	start := time.Now()
 	// build request
 	u, err := url.Parse(c.config.Endpoint)
 	if err != nil {
@@ -312,6 +313,7 @@ func (c *Client) BatchInsert(ctx context.Context, database, table string, rows [
 		return fmt.Errorf("TABLE [%s]%s", tableFullname, result)
 	}
 
-	logrus.Debugf("saving %d requests to %s successfully", len(rows), tableFullname)
+	elapsed := float64(time.Since(start).Milliseconds())
+	logrus.Debugf("saving %d requests to %s successfully, took %f", len(rows), tableFullname, elapsed)
 	return nil
 }
