@@ -34,7 +34,7 @@ type ViewManager struct {
 
 // NewViewManager
 func NewViewManager() *ViewManager {
-	return &ViewManager{collectors: make(map[string]*TableFieldCollector), queue: make(chan Element, 1024)}
+	return &ViewManager{collectors: make(map[string]*TableFieldCollector), queue: make(chan Element, 1024*10)}
 }
 
 func (m *ViewManager) Start() {
@@ -53,7 +53,11 @@ func (m *ViewManager) Start() {
 
 func (m *ViewManager) Collect(table string, doc interface{}) {
 	element := Element{table: table, doc: doc}
-	m.queue <- element
+	select {
+	case m.queue <- element:
+	default:
+		logrus.Warnf("view manager queue is full, dropping data for table: %s", table)
+	}
 }
 
 func (m *ViewManager) collect(table string, doc interface{}) {
