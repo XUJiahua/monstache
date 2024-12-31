@@ -183,6 +183,7 @@ type indexClient struct {
 	lastId             interface{} // save the id if full sync
 	lastIdSaved        interface{}
 	viewManager        view.Manager
+	exitOnBackoff      bool
 }
 
 // RouteData save to elasticsearch
@@ -449,6 +450,7 @@ type configOptions struct {
 	Debug                       bool
 	mongoClientOptions          *options.ClientOptions
 	SinkConfig                  sinks.SinkConfig `toml:"sink"`
+	ExitOnBackoff               bool             `toml:"exit-on-backoff"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -629,6 +631,14 @@ func (ic *indexClient) afterBulkCommon() func(int64, []bulk.BulkableRequest, err
 		}
 		wait := ic.backoffDuration()
 		infoLog.Printf("Backing off for %.1f minutes after bulk indexing failures.", wait.Minutes())
+
+		// stop process if exitOnBackoff enabled
+		if ic.exitOnBackoff {
+			infoLog.Println("Kill myself")
+			os.Exit(100)
+		}
+
+		// fixme: 经观察，程序会在这里阻塞，远超过 wait 时间
 		// signal the event loop to pause pulling new events for a duration
 		ic.bulkBackoffC <- wait
 		logrus.Infof("eventloop and bulk worker will back off for %.1f minutes", wait.Minutes())
@@ -1838,6 +1848,7 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	flag.BoolVar(&config.Version, "v", false, "True to print the version number")
 	flag.BoolVar(&config.Gzip, "gzip", false, "True to enable gzip for requests to Elasticsearch")
 	flag.BoolVar(&config.Verbose, "verbose", false, "True to output verbose messages")
+	flag.BoolVar(&config.ExitOnBackoff, "exit-on-backoff", false, "True to kill itself if backoff")
 	flag.BoolVar(&config.Pprof, "pprof", false, "True to enable pprof endpoints")
 	flag.BoolVar(&config.EnableOplog, "enable-oplog", false, "True to enable direct tailing of the oplog")
 	flag.BoolVar(&config.DisableChangeEvents, "disable-change-events", false, "True to disable listening for changes.  You must provide direct-reads in this case")
@@ -2487,6 +2498,7 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		}
 
 		config.SinkConfig = tomlConfig.SinkConfig
+		config.ExitOnBackoff = tomlConfig.ExitOnBackoff
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
@@ -5491,6 +5503,10 @@ func main() {
 	if config.Verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+	exitOnBackoff := config.ExitOnBackoff
+	if exitOnBackoff {
+		infoLog.Println("Exit on Backoff turned on.")
+	}
 
 	sh := &sigHandler{
 		clientStartedC: make(chan *indexClient),
@@ -5521,6 +5537,7 @@ func main() {
 		bulkBackoffC:   make(chan time.Duration),
 		bulkBackoff:    elastic.NewExponentialBackoff(1*time.Minute, 1*time.Hour),
 		bulkBackoffMax: 1 * time.Hour,
+		exitOnBackoff:  exitOnBackoff,
 	}
 	// use global backoff to slow down source (oplog) and sink (bulk worker) if bulk commit failed
 	afterBulk := ic.afterBulkCommon()
