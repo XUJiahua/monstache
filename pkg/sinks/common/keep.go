@@ -2,6 +2,8 @@ package common
 
 import (
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // todo: 需要支持数组，新增数组语法，而不仅仅支持点语法
@@ -45,6 +47,7 @@ func NewKeeper(ns string, fields ...string) *Keeper {
 }
 
 func (k *Keeper) Keep(doc map[string]interface{}) map[string]interface{} {
+	logrus.Debugf("keep fields for namespace: %s", k.ns)
 	if len(doc) == 0 {
 		return nil
 	}

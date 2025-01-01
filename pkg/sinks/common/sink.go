@@ -27,12 +27,20 @@ type TransformConfig struct {
 
 	// embed original data, unmodified
 	EmbedDoc bool `toml:"-"`
+
+	MongoKeepFields []MongoKeepFields `toml:"mongo-keep-fields"`
+}
+
+type MongoKeepFields struct {
+	Ns         string   `toml:"ns"`
+	KeepFields []string `toml:"keep-fields"`
 }
 
 // Sink it's a common Sink, all you need is injecting bulk.Client
 type Sink struct {
 	bulkProcessor *bulk.BulkProcessor
 	transform     TransformConfig
+	keepers       map[string]*Keeper
 }
 
 func (s *Sink) Flush() error {
@@ -62,9 +70,15 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 		transformConfig.EmbedDocFieldName = "__doc"
 	}
 
+	keepers := make(map[string]*Keeper)
+	for _, mongoKeepFields := range transformConfig.MongoKeepFields {
+		keepers[mongoKeepFields.Ns] = NewKeeper(mongoKeepFields.Ns, mongoKeepFields.KeepFields...)
+	}
+
 	sink := &Sink{
 		bulkProcessor: bulkProcessor,
 		transform:     transformConfig,
+		keepers:       keepers,
 	}
 
 	return sink, nil
@@ -81,6 +95,12 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	if objectID, ok = op.Id.(primitive.ObjectID); !ok {
 		logrus.Warnf("invalid _id type: %T, namespace: %s . Expecting ObjectId. Skip this op.", op.Id, op.Namespace)
 		return nil
+	}
+
+	// 保留字段
+	keeper, ok := s.keepers[op.Namespace]
+	if ok {
+		op.Data = keeper.Keep(op.Data)
 	}
 
 	data := op.Data
