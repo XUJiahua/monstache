@@ -23,3 +23,16 @@ func TestKeeper(t *testing.T) {
 	result := keeper.Keep(doc)
 	spew.Dump(result)
 }
+
+func TestDrop(t *testing.T) {
+	keeper := NewKeeper("test", "a.b", "c")
+	doc := map[string]interface{}{
+		"a": map[string]interface{}{
+			"b": 1,
+			"d": 2,
+		},
+		"c": 3,
+	}
+	result := keeper.Drop(doc)
+	spew.Dump(result)
+}
