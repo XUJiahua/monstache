@@ -33,14 +33,15 @@ type TransformConfig struct {
 
 type MongoKeepFields struct {
 	Ns         string   `toml:"ns"`
-	KeepFields []string `toml:"keep-fields"`
+	IsDrop     bool     `toml:"drop"`
+	KeepFields []string `toml:"fields"`
 }
 
 // Sink it's a common Sink, all you need is injecting bulk.Client
 type Sink struct {
 	bulkProcessor *bulk.BulkProcessor
 	transform     TransformConfig
-	keepers       map[string]*Keeper
+	keepers       map[string]*Transformer
 }
 
 func (s *Sink) Flush() error {
@@ -70,9 +71,9 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 		transformConfig.EmbedDocFieldName = "__doc"
 	}
 
-	keepers := make(map[string]*Keeper)
+	keepers := make(map[string]*Transformer)
 	for _, mongoKeepFields := range transformConfig.MongoKeepFields {
-		keepers[mongoKeepFields.Ns] = NewKeeper(mongoKeepFields.Ns, mongoKeepFields.KeepFields...)
+		keepers[mongoKeepFields.Ns] = NewTransformer(mongoKeepFields.Ns, mongoKeepFields.IsDrop, mongoKeepFields.KeepFields...)
 	}
 
 	sink := &Sink{
@@ -97,10 +98,10 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 		return nil
 	}
 
-	// 保留字段
+	// 保留字段或删除字段
 	keeper, ok := s.keepers[op.Namespace]
 	if ok {
-		op.Data = keeper.Keep(op.Data)
+		op.Data = keeper.Transform(op.Data)
 	}
 
 	data := op.Data

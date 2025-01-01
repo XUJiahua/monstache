@@ -6,6 +6,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Transformer struct {
+	keeper *Keeper
+	isDrop bool
+}
+
+func NewTransformer(ns string, isDrop bool, fields ...string) *Transformer {
+	keeper := NewKeeper(ns, fields...)
+	return &Transformer{
+		keeper: keeper,
+		isDrop: isDrop,
+	}
+}
+
+func (t *Transformer) Transform(doc map[string]interface{}) map[string]interface{} {
+	if t.isDrop {
+		return t.keeper.Drop(doc)
+	}
+	return t.keeper.Keep(doc)
+}
+
 // todo: 需要支持数组，新增数组语法，而不仅仅支持点语法
 
 type Field struct {
