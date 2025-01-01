@@ -1,12 +1,13 @@
 package common
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestKeeper(t *testing.T) {
-	keeper := NewKeeper("test", "a.b.c", "x.y")
+	keeper := NewKeeper("test", "a", "x.y")
 	doc := map[string]interface{}{
 		"a": map[string]interface{}{
 			"b": map[string]interface{}{

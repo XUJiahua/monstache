@@ -4,6 +4,8 @@ import (
 	"strings"
 )
 
+// todo: 需要支持数组，新增数组语法，而不仅仅支持点语法
+
 type Field struct {
 	Name  string
 	Parts []string
@@ -14,6 +16,10 @@ type Keeper struct {
 	fields []Field
 }
 
+// NewKeeper
+// ns mongo 的 namespace
+// fields 需要保留的字段，支持点语法
+// 使用 key1 可以覆盖 key1.subkey1, key1.subkey2
 func NewKeeper(ns string, fields ...string) *Keeper {
 	fieldsMap := make(map[string]struct{}, len(fields))
 	newFields := make([]Field, 0, len(fields))
