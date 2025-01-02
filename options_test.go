@@ -22,12 +22,6 @@ func TestToTomlString(t *testing.T) {
 			User:     "default",
 			Password: "",
 		},
-		Sinks: map[string]clickhouse.Namespace{
-			"db.col": {
-				Database: "db",
-				Table:    "table",
-			},
-		},
 	}
 	tomlStr := ToTomlString(&configOptions{SinkConfig: sinks.SinkConfig{
 		ClickHouseConfig: clickhouseConfig,
@@ -46,6 +40,18 @@ func TestToTomlString(t *testing.T) {
 			VirtualDeleteFieldName: "",
 			OpTimeFieldName:        "",
 			VersionFieldName:       "",
+			MongoKeepFields: []common.MongoKeepFields{
+				{
+					Ns:         "config.abc",
+					IsDrop:     false,
+					KeepFields: []string{"_id"},
+				},
+				{
+					Ns:         "config.abc",
+					IsDrop:     false,
+					KeepFields: []string{"_id"},
+				},
+			},
 		},
 		Bulk: sinks.BulkConfig{
 			Workers:              1,
