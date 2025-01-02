@@ -80,18 +80,25 @@ func (c *Client) Name() string {
 }
 
 func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
-	// group docs by table
-	docsByTable := make(map[string][]interface{})
+	// group docs by table and date
+	type tableDate struct {
+		table string
+		date  string
+	}
+	docsByTableDate := make(map[tableDate][]interface{})
 	nsByTable := make(map[string]string)
+
 	for _, request := range requests {
 		ns := request.GetNamespace()
 		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
+		date := request.GetDate()
+		key := tableDate{table: table, date: date}
 		nsByTable[table] = ns
 
-		if docs, ok := docsByTable[table]; ok {
-			docsByTable[table] = append(docs, request.GetDoc())
+		if docs, ok := docsByTableDate[key]; ok {
+			docsByTableDate[key] = append(docs, request.GetDoc())
 		} else {
-			docsByTable[table] = []interface{}{request.GetDoc()}
+			docsByTableDate[key] = []interface{}{request.GetDoc()}
 		}
 
 		// collect view fields
@@ -107,21 +114,22 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 		return err
 	}
 
-	for table, docs := range docsByTable {
-		ns := nsByTable[table]
+	for key, docs := range docsByTableDate {
+		ns := nsByTable[key.table]
 		database := c.config.Database
 		preprocess := c.NeedPreprocess(ns)
+		logrus.Debugf("starting to commit to %s.%s(%s), date: %s", database, key.table, ns, key.date)
 		if preprocess {
-			if err := c.BatchInsertWithPreprocess(ctx, database, table, docs); err != nil {
+			if err := c.BatchInsertWithPreprocess(ctx, database, key.table, docs); err != nil {
 				if c.config.DumpOnError {
-					Dump(ns, database, table, docs)
+					Dump(ns, database, key.table, docs)
 				}
 				return err
 			}
 		} else {
-			if err := c.BatchInsert(ctx, database, table, docs); err != nil {
+			if err := c.BatchInsert(ctx, database, key.table, docs); err != nil {
 				if c.config.DumpOnError {
-					Dump(ns, database, table, docs)
+					Dump(ns, database, key.table, docs)
 				}
 				return err
 			}

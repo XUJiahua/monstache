@@ -123,12 +123,14 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 	} else {
 		data[s.transform.VersionFieldName] = objectID.Timestamp().Unix() << 32
 	}
-	data[s.transform.DateFieldName] = objectID.Timestamp().Format("2006-01-02")
+	date := objectID.Timestamp().Format("2006-01-02")
+	data[s.transform.DateFieldName] = date
 
 	request := Request{
 		Namespace: op.Namespace,
 		Id:        op.Id,
 		Doc:       data,
+		Date:      date,
 	}
 	s.bulkProcessor.Add(request)
 

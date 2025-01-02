@@ -18,6 +18,7 @@ type BulkableRequest interface {
 	GetNamespace() string
 	GetId() interface{}
 	GetDoc() interface{}
+	GetDate() string
 }
 
 type Client interface {

@@ -30,6 +30,10 @@ func (m MockRequest) GetDoc() interface{} {
 	panic("implement me")
 }
 
+func (m MockRequest) GetDate() string {
+	panic("implement me")
+}
+
 type MockClient struct {
 	i int
 }
