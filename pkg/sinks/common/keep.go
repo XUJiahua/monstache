@@ -12,6 +12,10 @@ type Transformer struct {
 }
 
 func NewTransformer(ns string, isDrop bool, fields ...string) *Transformer {
+	if !isDrop {
+		// if keep fields, _id is must
+		fields = append(fields, "_id")
+	}
 	keeper := NewKeeper(ns, fields...)
 	return &Transformer{
 		keeper: keeper,
