@@ -42,6 +42,7 @@ type Sink struct {
 	bulkProcessor *bulk.BulkProcessor
 	transform     TransformConfig
 	keepers       map[string]*Transformer
+	start         int64
 }
 
 func (s *Sink) Flush() error {
@@ -80,6 +81,7 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 		bulkProcessor: bulkProcessor,
 		transform:     transformConfig,
 		keepers:       keepers,
+		start:         time.Now().Unix(),
 	}
 
 	return sink, nil
@@ -121,7 +123,13 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 		data[s.transform.OpTimeFieldName] = op.Timestamp.T
 		data[s.transform.VersionFieldName] = TimeStampToInt64(op.Timestamp)
 	} else {
-		data[s.transform.VersionFieldName] = objectID.Timestamp().Unix() << 32
+		// fix: 如果使用原数据的创建时间，就会造成无法覆盖的情况？还是说最后的覆盖前面的。但至少不会覆盖掉 oplog 触发的记录
+		// 所以使用同步时间比较合适
+		createTime := objectID.Timestamp().Unix() << 32
+		if createTime < s.start {
+			createTime = s.start
+		}
+		data[s.transform.VersionFieldName] = createTime
 	}
 	date := objectID.Timestamp().Format("2006-01-02")
 	data[s.transform.DateFieldName] = date
