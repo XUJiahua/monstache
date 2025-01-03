@@ -42,7 +42,7 @@ type Sink struct {
 	bulkProcessor *bulk.BulkProcessor
 	transform     TransformConfig
 	keepers       map[string]*Transformer
-	start         int64
+	startAsVer    int64
 }
 
 func (s *Sink) Flush() error {
@@ -81,7 +81,7 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 		bulkProcessor: bulkProcessor,
 		transform:     transformConfig,
 		keepers:       keepers,
-		start:         time.Now().Unix(),
+		startAsVer:    time.Now().Unix() << 32,
 	}
 
 	return sink, nil
@@ -126,8 +126,8 @@ func (s *Sink) process(op *gtm.Op, isDeleteOp bool) error {
 		// fix: 如果使用原数据的创建时间，就会造成无法覆盖的情况？还是说最后的覆盖前面的。但至少不会覆盖掉 oplog 触发的记录
 		// 所以使用同步时间比较合适
 		createTime := objectID.Timestamp().Unix() << 32
-		if createTime < s.start {
-			createTime = s.start
+		if createTime < s.startAsVer {
+			createTime = s.startAsVer
 		}
 		data[s.transform.VersionFieldName] = createTime
 	}
