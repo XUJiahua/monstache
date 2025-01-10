@@ -11,7 +11,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"io/ioutil"
 	"log"
 	"math"
@@ -31,6 +30,8 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+
+	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rwynn/monstache/v6/pkg/metrics"
@@ -422,6 +423,7 @@ type configOptions struct {
 	Worker                      string
 	ChangeStreamNs              stringargs     `toml:"change-stream-namespaces"`
 	DirectReadResumable         bool           `toml:"direct-read-resumable"`
+	DirectReadResumableIdOffset string         `toml:"direct-read-resumable-id-offset"` // 可断点直连同步，开始 offset 可指定，指定后就不再从数据库取 offset 了，仅支持 _id
 	DirectReadNs                stringargs     `toml:"direct-read-namespaces"`
 	DirectReadSplitMax          int            `toml:"direct-read-split-max"`
 	DirectReadConcur            int            `toml:"direct-read-concur"`
@@ -2265,6 +2267,9 @@ func (config *configOptions) loadConfigFile() *configOptions {
 		}
 		if !config.DirectReadResumable && tomlConfig.DirectReadResumable {
 			config.DirectReadResumable = true
+		}
+		if config.DirectReadResumableIdOffset == "" {
+			config.DirectReadResumableIdOffset = tomlConfig.DirectReadResumableIdOffset
 		}
 		if !config.ElasticRetry && tomlConfig.ElasticRetry {
 			config.ElasticRetry = true
@@ -4971,10 +4976,21 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 			logrus.Debugf("direct-read-resumable enabled, pipe will be not disabled")
 		}
 
-		var err error
-		offsets, err = getNamespaceDirectReadOffsets(ic.mongo, ic.config.ConfigDatabaseName, ic.config.ResumeName)
-		if err != nil {
-			errorLog.Fatalf("Error retrieving direct read offsets: %s", err)
+		if config.DirectReadResumableIdOffset != "" {
+			objectId, err := primitive.ObjectIDFromHex(config.DirectReadResumableIdOffset)
+			if err != nil {
+				errorLog.Fatalf("Error parsing DirectReadResumableIdOffset: %s, %v", config.DirectReadResumableIdOffset, err)
+			}
+			ns := config.DirectReadNs[0]
+			offsets = make(map[string]interface{})
+			offsets[ns] = objectId
+		} else {
+			logrus.Infof("Load offsets from MongoDB ...")
+			var err error
+			offsets, err = getNamespaceDirectReadOffsets(ic.mongo, ic.config.ConfigDatabaseName, ic.config.ResumeName)
+			if err != nil {
+				errorLog.Fatalf("Error retrieving direct read offsets: %s", err)
+			}
 		}
 		logrus.Debugf("got offsets from %v", offsets)
 	}
