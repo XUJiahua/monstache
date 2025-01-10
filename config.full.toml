@@ -64,6 +64,7 @@ max-file-size = 0
 ConfigFile = ""
 Worker = ""
 direct-read-resumable = true
+#direct-read-resumable-id-offset = "6718b50aa9c334a2920064a6"
 direct-read-namespaces = ["db1.col1"]
 direct-read-split-max = 0
 direct-read-concur = 0
@@ -127,22 +128,14 @@ Debug = false
     [sink.clickhouse.auth]
       user = "default"
       password = ""
-    [sink.clickhouse.sinks]
-      [sink.clickhouse.sinks."db.col"]
-        database = "db"
-        table = "table"
   [sink.kafka]
     enabled = false
     kafka-brokers = ""
     kafka-topic-prefix = ""
   [sink.file]
-    enabled = true
-  [sink.console]
     enabled = false
-  [sink.transform]
-    virtual-delete-field-name = ""
-    op-time-field-name = ""
-    update-time-field-name = ""
+  [sink.console]
+    enabled = true
   [sink.bulk]
     workers = 1
     batch-size = 1000
