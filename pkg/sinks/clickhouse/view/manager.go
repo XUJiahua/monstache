@@ -56,7 +56,7 @@ func (m *ViewManager) Collect(table string, doc interface{}) {
 	select {
 	case m.queue <- element:
 	default:
-		logrus.Warnf("view manager queue is full, dropping data for table: %s", table)
+		logrus.Debugf("view manager queue is full, dropping data for table: %s", table)
 	}
 }
 

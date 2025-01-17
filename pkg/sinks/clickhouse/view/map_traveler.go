@@ -133,7 +133,7 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 						if t.stringOnly && globalTy != "string" {
 							continue
 						}
-						t.logger.Warnf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
+						t.logger.Debugf("assign default value to key %s(%s->%s)", globalKey, ty, globalTy)
 						doc[k] = defaultValue
 					}
 				}
@@ -150,10 +150,10 @@ func (t *MapTraveler) travelObject(doc map[string]interface{}, prefix string, co
 					if t.stringOnly && ty != "string" {
 						continue
 					}
-					t.logger.Warnf("assign default value to key %s(%s)", key, ty)
+					t.logger.Debugf("assign default value to key %s(%s)", key, ty)
 					doc[key] = defaultValue
 				} else {
-					t.logger.Warnf("no default value for key %s(%s)", key, ty)
+					t.logger.Debugf("no default value for key %s(%s)", key, ty)
 				}
 			}
 		}
