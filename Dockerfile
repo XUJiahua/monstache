@@ -9,7 +9,7 @@ FROM debian:12 AS runtime
 RUN apt-get update
 RUN apt-get install ca-certificates -y
 RUN update-ca-certificates
-
+RUN apt-get install procps tmux vim -y
 WORKDIR /app
 
 # Copy the products
