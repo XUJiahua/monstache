@@ -5537,6 +5537,16 @@ func main() {
 	if exitOnBackoff {
 		infoLog.Println("Exit on Backoff turned on.")
 	}
+	if config.OplogRecoverFilepath != "" {
+		infoLog.Printf("recover oplog from file %s\n", config.OplogRecoverFilepath)
+		infoLog.Println("set ExitAfterDirectReads=true")
+		infoLog.Println("set Resume=false")
+		infoLog.Println("set ResumeName=")
+		config.ExitAfterDirectReads = true
+		config.Resume = false
+		config.ResumeName = ""
+		config.EnableHTTPServer = false
+	}
 
 	sh := &sigHandler{
 		clientStartedC: make(chan *indexClient),
