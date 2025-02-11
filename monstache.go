@@ -570,19 +570,19 @@ func (args *stringargs) Set(value string) error {
 	return nil
 }
 
-func (config *ConfigOptions) readShards() bool {
+func (config *ConfigOptions) ReadShards() bool {
 	return len(config.ChangeStreamNs) == 0 && config.MongoConfigURL != ""
 }
 
-func (config *ConfigOptions) dynamicDirectReadList() bool {
+func (config *ConfigOptions) DynamicDirectReadList() bool {
 	return len(config.DirectReadNs) == 1 && config.DirectReadNs[0] == ""
 }
 
-func (config *ConfigOptions) ignoreDatabaseForDirectReads(db string) bool {
+func (config *ConfigOptions) IgnoreDatabaseForDirectReads(db string) bool {
 	return db == "local" || db == "admin" || db == "config" || db == config.ConfigDatabaseName
 }
 
-func (config *ConfigOptions) ignoreCollectionForDirectReads(col string) bool {
+func (config *ConfigOptions) IgnoreCollectionForDirectReads(col string) bool {
 	return strings.HasPrefix(col, "system.")
 }
 
@@ -691,7 +691,7 @@ func (ic *indexClient) backoff(wait time.Duration) {
 	}
 }
 
-func (config *ConfigOptions) parseElasticsearchVersion(number string) (err error) {
+func (config *ConfigOptions) ParseElasticsearchVersion(number string) (err error) {
 	if number == "" {
 		err = errors.New("Elasticsearch version cannot be blank")
 	} else {
@@ -740,7 +740,7 @@ func (ic *indexClient) newStatsBulkProcessor(client *elastic.Client) (bulk *elas
 	return bulkService.Do(context.Background())
 }
 
-func (config *ConfigOptions) needsSecureScheme() bool {
+func (config *ConfigOptions) NeedsSecureScheme() bool {
 	if len(config.ElasticUrls) > 0 {
 		for _, url := range config.ElasticUrls {
 			if strings.HasPrefix(url, "https") {
@@ -752,11 +752,11 @@ func (config *ConfigOptions) needsSecureScheme() bool {
 
 }
 
-func (config *ConfigOptions) newElasticClient() (client *elastic.Client, err error) {
+func (config *ConfigOptions) NewElasticClient() (client *elastic.Client, err error) {
 	var clientOptions []elastic.ClientOptionFunc
 	var httpClient *http.Client
 	clientOptions = append(clientOptions, elastic.SetSniff(false))
-	if config.needsSecureScheme() {
+	if config.NeedsSecureScheme() {
 		clientOptions = append(clientOptions, elastic.SetScheme("https"))
 	}
 	if len(config.ElasticUrls) > 0 {
@@ -788,13 +788,13 @@ func (config *ConfigOptions) newElasticClient() (client *elastic.Client, err err
 	return elastic.NewClient(clientOptions...)
 }
 
-func (config *ConfigOptions) testElasticsearchConn(client *elastic.Client) (err error) {
+func (config *ConfigOptions) TestElasticsearchConn(client *elastic.Client) (err error) {
 	var number string
 	url := config.ElasticUrls[0]
 	number, err = client.ElasticsearchVersion(url)
 	if err == nil {
 		infoLog.Printf("Successfully connected to Elasticsearch version %s", number)
-		err = config.parseElasticsearchVersion(number)
+		err = config.ParseElasticsearchVersion(number)
 	}
 	return
 }
@@ -1818,7 +1818,7 @@ func (ic *indexClient) saveDirectReadNamespaces() (err error) {
 	return
 }
 
-func (config *ConfigOptions) parseCommandLineFlags() *ConfigOptions {
+func (config *ConfigOptions) ParseCommandLineFlags() *ConfigOptions {
 	flag.BoolVar(&config.Print, "print-config", false, "Print the configuration and then exit")
 	flag.BoolVar(&config.EnableTemplate, "tpl", false, "True to interpret the config file as a template")
 	flag.StringVar(&config.EnvDelimiter, "env-delimiter", ",", "A delimiter to use when splitting environment variable values")
@@ -1916,7 +1916,7 @@ func (config *ConfigOptions) parseCommandLineFlags() *ConfigOptions {
 	return config
 }
 
-func (config *ConfigOptions) loadReplacements() {
+func (config *ConfigOptions) LoadReplacements() {
 	if config.Relate != nil {
 		for _, r := range config.Relate {
 			if r.Namespace != "" || r.WithNamespace != "" {
@@ -1951,7 +1951,7 @@ func (config *ConfigOptions) loadReplacements() {
 	}
 }
 
-func (config *ConfigOptions) loadIndexTypes() {
+func (config *ConfigOptions) LoadIndexTypes() {
 	if config.Mapping != nil {
 		for _, m := range config.Mapping {
 			if m.Namespace != "" && m.Index != "" {
@@ -1966,7 +1966,7 @@ func (config *ConfigOptions) loadIndexTypes() {
 	}
 }
 
-func (config *ConfigOptions) loadPipelines() {
+func (config *ConfigOptions) LoadPipelines() {
 	for _, s := range config.Pipeline {
 		if s.Path == "" && s.Script == "" {
 			errorLog.Fatalln("Pipelines must specify path or script attributes")
@@ -2008,7 +2008,7 @@ func (config *ConfigOptions) loadPipelines() {
 	}
 }
 
-func (config *ConfigOptions) loadFilters() {
+func (config *ConfigOptions) LoadFilters() {
 	for _, s := range config.Filter {
 		if s.Script != "" || s.Path != "" {
 			if s.Path != "" && s.Script != "" {
@@ -2065,7 +2065,7 @@ func jsStringFromBinData(call otto.FunctionCall) otto.Value {
 	return s
 }
 
-func (config *ConfigOptions) loadScripts() {
+func (config *ConfigOptions) LoadScripts() {
 	for _, s := range config.Script {
 		if s.Script != "" || s.Path != "" {
 			if s.Path != "" && s.Script != "" {
@@ -2109,7 +2109,7 @@ func (config *ConfigOptions) loadScripts() {
 	}
 }
 
-func (config *ConfigOptions) loadPlugins() *ConfigOptions {
+func (config *ConfigOptions) LoadPlugins() *ConfigOptions {
 	if config.MapperPluginPath != "" {
 		funcDefined := false
 		p, err := plugin.Open(config.MapperPluginPath)
@@ -2164,7 +2164,7 @@ func (config *ConfigOptions) loadPlugins() *ConfigOptions {
 	return config
 }
 
-func (config *ConfigOptions) decodeAsTemplate() *ConfigOptions {
+func (config *ConfigOptions) DecodeAsTemplate() *ConfigOptions {
 	env := map[string]string{}
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)
@@ -2192,7 +2192,7 @@ func (config *ConfigOptions) decodeAsTemplate() *ConfigOptions {
 	return config
 }
 
-func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
+func (config *ConfigOptions) LoadConfigFile() *ConfigOptions {
 	if config.ConfigFile != "" {
 		var tomlConfig = ConfigOptions{
 			ConfigFile:             config.ConfigFile,
@@ -2203,7 +2203,7 @@ func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
 			GtmSettings:            gtmDefaultSettings(),
 		}
 		if config.EnableTemplate {
-			tomlConfig.decodeAsTemplate()
+			tomlConfig.DecodeAsTemplate()
 		} else {
 			if md, err := toml.DecodeFile(tomlConfig.ConfigFile, &tomlConfig); err != nil {
 				errorLog.Fatalln(err)
@@ -2436,7 +2436,7 @@ func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
 		if config.IndexFiles {
 			if len(config.FileNamespaces) == 0 {
 				config.FileNamespaces = tomlConfig.FileNamespaces
-				config.loadGridFsConfig()
+				config.LoadGridFsConfig()
 			}
 		}
 		if config.Worker == "" {
@@ -2451,16 +2451,16 @@ func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
 		if config.EnablePatches {
 			if len(config.PatchNamespaces) == 0 {
 				config.PatchNamespaces = tomlConfig.PatchNamespaces
-				config.loadPatchNamespaces()
+				config.LoadPatchNamespaces()
 			}
 		}
 		if len(config.RoutingNamespaces) == 0 {
 			config.RoutingNamespaces = tomlConfig.RoutingNamespaces
-			config.loadRoutingNamespaces()
+			config.LoadRoutingNamespaces()
 		}
 		if len(config.TimeMachineNamespaces) == 0 {
 			config.TimeMachineNamespaces = tomlConfig.TimeMachineNamespaces
-			config.loadTimeMachineNamespaces()
+			config.LoadTimeMachineNamespaces()
 		}
 		if config.TimeMachineIndexPrefix == "" {
 			config.TimeMachineIndexPrefix = tomlConfig.TimeMachineIndexPrefix
@@ -2507,16 +2507,16 @@ func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
 		config.GtmSettings = tomlConfig.GtmSettings
 		config.Relate = tomlConfig.Relate
 		config.LogRotate = tomlConfig.LogRotate
-		tomlConfig.loadScripts()
-		tomlConfig.loadFilters()
-		tomlConfig.loadPipelines()
-		tomlConfig.loadIndexTypes()
-		tomlConfig.loadReplacements()
+		tomlConfig.LoadScripts()
+		tomlConfig.LoadFilters()
+		tomlConfig.LoadPipelines()
+		tomlConfig.LoadIndexTypes()
+		tomlConfig.LoadReplacements()
 	}
 	return config
 }
 
-func (config *ConfigOptions) newLogger(path string) *lumberjack.Logger {
+func (config *ConfigOptions) NewLogger(path string) *lumberjack.Logger {
 	return &lumberjack.Logger{
 		Filename:   path,
 		MaxSize:    config.LogRotate.MaxSize,
@@ -2527,7 +2527,7 @@ func (config *ConfigOptions) newLogger(path string) *lumberjack.Logger {
 	}
 }
 
-func (config *ConfigOptions) setupLogging() *ConfigOptions {
+func (config *ConfigOptions) SetupLogging() *ConfigOptions {
 	if config.GraylogAddr != "" {
 		gelfWriter, err := gelf.NewUDPWriter(config.GraylogAddr)
 		if err != nil {
@@ -2541,37 +2541,37 @@ func (config *ConfigOptions) setupLogging() *ConfigOptions {
 	} else {
 		logs := config.Logs
 		if logs.Info != "" {
-			infoLog.SetOutput(config.newLogger(logs.Info))
+			infoLog.SetOutput(config.NewLogger(logs.Info))
 		}
 		if logs.Warn != "" {
-			warnLog.SetOutput(config.newLogger(logs.Warn))
+			warnLog.SetOutput(config.NewLogger(logs.Warn))
 		}
 		if logs.Error != "" {
-			errorLog.SetOutput(config.newLogger(logs.Error))
+			errorLog.SetOutput(config.NewLogger(logs.Error))
 		}
 		if logs.Trace != "" {
-			traceLog.SetOutput(config.newLogger(logs.Trace))
+			traceLog.SetOutput(config.NewLogger(logs.Trace))
 		}
 		if logs.Stats != "" {
-			statsLog.SetOutput(config.newLogger(logs.Stats))
+			statsLog.SetOutput(config.NewLogger(logs.Stats))
 		}
 	}
 	return config
 }
 
-func (config *ConfigOptions) build() *ConfigOptions {
-	config.loadEnvironment()
-	config.loadTimeMachineNamespaces()
-	config.loadRoutingNamespaces()
-	config.loadPatchNamespaces()
-	config.loadGridFsConfig()
-	config.loadConfigFile()
-	config.loadPlugins()
-	config.setDefaults()
+func (config *ConfigOptions) Build() *ConfigOptions {
+	config.LoadEnvironment()
+	config.LoadTimeMachineNamespaces()
+	config.LoadRoutingNamespaces()
+	config.LoadPatchNamespaces()
+	config.LoadGridFsConfig()
+	config.LoadConfigFile()
+	config.LoadPlugins()
+	config.SetDefaults()
 	return config
 }
 
-func (config *ConfigOptions) loadEnvironment() *ConfigOptions {
+func (config *ConfigOptions) LoadEnvironment() *ConfigOptions {
 	del := config.EnvDelimiter
 	if del == "" {
 		del = ","
@@ -2587,7 +2587,7 @@ func (config *ConfigOptions) loadEnvironment() *ConfigOptions {
 		}
 		if strings.HasSuffix(name, "__FILE") {
 			var err error
-			name, val, err = config.loadVariableValueFromFile(name, val)
+			name, val, err = config.LoadVariableValueFromFile(name, val)
 			if err != nil {
 				panic(err)
 			}
@@ -2774,7 +2774,7 @@ func (config *ConfigOptions) loadEnvironment() *ConfigOptions {
 	return config
 }
 
-func (config *ConfigOptions) loadVariableValueFromFile(name string, path string) (n string, v string, err error) {
+func (config *ConfigOptions) LoadVariableValueFromFile(name string, path string) (n string, v string, err error) {
 	name = strings.TrimSuffix(name, "__FILE")
 	f, err := os.Open(path)
 	if err != nil {
@@ -2788,35 +2788,35 @@ func (config *ConfigOptions) loadVariableValueFromFile(name string, path string)
 	return name, string(c), nil
 }
 
-func (config *ConfigOptions) loadRoutingNamespaces() *ConfigOptions {
+func (config *ConfigOptions) LoadRoutingNamespaces() *ConfigOptions {
 	for _, namespace := range config.RoutingNamespaces {
 		routingNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *ConfigOptions) loadTimeMachineNamespaces() *ConfigOptions {
+func (config *ConfigOptions) LoadTimeMachineNamespaces() *ConfigOptions {
 	for _, namespace := range config.TimeMachineNamespaces {
 		tmNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *ConfigOptions) loadPatchNamespaces() *ConfigOptions {
+func (config *ConfigOptions) LoadPatchNamespaces() *ConfigOptions {
 	for _, namespace := range config.PatchNamespaces {
 		patchNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *ConfigOptions) loadGridFsConfig() *ConfigOptions {
+func (config *ConfigOptions) LoadGridFsConfig() *ConfigOptions {
 	for _, namespace := range config.FileNamespaces {
 		fileNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config ConfigOptions) dump() {
+func (config ConfigOptions) Dump() {
 	if config.MongoURL != "" {
 		config.MongoURL = cleanMongoURL(config.MongoURL)
 	}
@@ -2846,7 +2846,7 @@ func (config ConfigOptions) dump() {
 	}
 }
 
-func (config *ConfigOptions) validate() {
+func (config *ConfigOptions) Validate() {
 	if config.DisableChangeEvents && len(config.DirectReadNs) == 0 {
 		errorLog.Fatalln("Direct read namespaces must be specified if change events are disabled")
 	}
@@ -2871,7 +2871,7 @@ func (config *ConfigOptions) validate() {
 	}
 }
 
-func (config *ConfigOptions) setDefaults() *ConfigOptions {
+func (config *ConfigOptions) SetDefaults() *ConfigOptions {
 	if !config.EnableOplog && len(config.ChangeStreamNs) == 0 {
 		config.ChangeStreamNs = []string{""}
 	}
@@ -2991,7 +2991,7 @@ func cleanMongoURL(URL string) string {
 	return url
 }
 
-func (config *ConfigOptions) dialMongo(URL string) (*mongo.Client, error) {
+func (config *ConfigOptions) DialMongo(URL string) (*mongo.Client, error) {
 	var clientOptions *options.ClientOptions
 	if config.mongoClientOptions == nil {
 		// use the initial URL to create most of the client options
@@ -4405,11 +4405,11 @@ func (ic *indexClient) notifySd() {
 	}
 }
 
-func (config *ConfigOptions) makeShardInsertHandler() gtm.ShardInsertHandler {
+func (config *ConfigOptions) MakeShardInsertHandler() gtm.ShardInsertHandler {
 	return func(shardInfo *gtm.ShardInfo) (*mongo.Client, error) {
 		shardURL := shardInfo.GetURL()
 		infoLog.Printf("Adding shard found at %s\n", cleanMongoURL(shardURL))
-		return config.dialMongo(shardURL)
+		return config.DialMongo(shardURL)
 	}
 }
 
@@ -4713,7 +4713,7 @@ func (ic *indexClient) dialShards() []*mongo.Client {
 	for _, shardInfo := range shardInfos {
 		shardURL := shardInfo.GetURL()
 		infoLog.Printf("Adding shard found at %s\n", cleanMongoURL(shardURL))
-		shard, err := ic.config.dialMongo(shardURL)
+		shard, err := ic.config.DialMongo(shardURL)
 		if err != nil {
 			errorLog.Fatalf("Unable to connect to mongodb shard using URL %s: %s", cleanMongoURL(shardURL), err)
 		}
@@ -4811,9 +4811,9 @@ func (ic *indexClient) buildConnections() []*mongo.Client {
 	var mongos []*mongo.Client
 	var err error
 	config := ic.config
-	if config.readShards() {
+	if config.ReadShards() {
 		// if we have a config server URL then we are running in a sharded cluster
-		ic.mongoConfig, err = config.dialMongo(config.MongoConfigURL)
+		ic.mongoConfig, err = config.DialMongo(config.MongoConfigURL)
 		if err != nil {
 			errorLog.Fatalf("Unable to connect to mongodb config server using URL %s: %s",
 				cleanMongoURL(config.MongoConfigURL), err)
@@ -4828,7 +4828,7 @@ func (ic *indexClient) buildConnections() []*mongo.Client {
 func (ic *indexClient) buildFilterChain() []gtm.OpFilter {
 	config := ic.config
 	filterChain := []gtm.OpFilter{notMonstache(config), notSystem, notChunks}
-	if config.readShards() {
+	if config.ReadShards() {
 		filterChain = append(filterChain, notConfig)
 	}
 	if config.NsRegex != "" {
@@ -4886,7 +4886,7 @@ func (ic *indexClient) buildDynamicDirectReadNs(filter gtm.OpFilter) (names []st
 		errorLog.Fatalf("Failed to read database names for dynamic direct reads: %s", err)
 	}
 	for _, d := range dbs {
-		if config.ignoreDatabaseForDirectReads(d) {
+		if config.IgnoreDatabaseForDirectReads(d) {
 			continue
 		}
 		db := client.Database(d)
@@ -4896,7 +4896,7 @@ func (ic *indexClient) buildDynamicDirectReadNs(filter gtm.OpFilter) (names []st
 			return
 		}
 		for _, c := range cols {
-			if config.ignoreCollectionForDirectReads(c) {
+			if config.IgnoreCollectionForDirectReads(c) {
 				continue
 			}
 			ns := strings.Join([]string{d, c}, ".")
@@ -4951,7 +4951,7 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 	directReadFilter = gtm.ChainOpFilters(filterArray...)
 	after := ic.buildTimestampGen()
 	token := ic.buildTokenGen()
-	if config.dynamicDirectReadList() {
+	if config.DynamicDirectReadList() {
 		config.DirectReadNs = ic.buildDynamicDirectReadNs(nsFilter)
 	}
 	if config.DirectReadStateful {
@@ -5041,8 +5041,8 @@ func (ic *indexClient) startListen() {
 
 	gtmOpts := ic.buildGtmOptions()
 	ic.gtmCtx = gtm.StartMulti(conns, gtmOpts)
-	if config.readShards() && !config.DisableChangeEvents {
-		ic.gtmCtx.AddShardListener(ic.mongoConfig, gtmOpts, config.makeShardInsertHandler())
+	if config.ReadShards() && !config.DisableChangeEvents {
+		ic.gtmCtx.AddShardListener(ic.mongoConfig, gtmOpts, config.MakeShardInsertHandler())
 	}
 }
 
@@ -5436,18 +5436,18 @@ func MustConfig() *ConfigOptions {
 		GtmSettings: gtmDefaultSettings(),
 		LogRotate:   logRotateDefaults(),
 	}
-	config.parseCommandLineFlags()
+	config.ParseCommandLineFlags()
 	if config.Version {
 		fmt.Println(version)
 		os.Exit(0)
 	}
-	config.build()
+	config.Build()
 	if config.Print {
-		config.dump()
+		config.Dump()
 		os.Exit(0)
 	}
-	config.setupLogging()
-	config.validate()
+	config.SetupLogging()
+	config.Validate()
 	return config
 }
 
@@ -5482,7 +5482,7 @@ func validateFeatures(config *ConfigOptions, mongoInfo *buildInfo) {
 }
 
 func buildMongoClient(config *ConfigOptions) *mongo.Client {
-	mongoClient, err := config.dialMongo(config.MongoURL)
+	mongoClient, err := config.DialMongo(config.MongoURL)
 	if err != nil {
 		errorLog.Fatalf("Unable to connect to MongoDB using URL %s: %s",
 			cleanMongoURL(config.MongoURL), err)
@@ -5501,16 +5501,16 @@ func buildMongoClient(config *ConfigOptions) *mongo.Client {
 }
 
 func buildElasticClient(config *ConfigOptions) *elastic.Client {
-	elasticClient, err := config.newElasticClient()
+	elasticClient, err := config.NewElasticClient()
 	if err != nil {
 		errorLog.Fatalf("Unable to create Elasticsearch client: %s", err)
 	}
 	if config.ElasticVersion == "" {
-		if err := config.testElasticsearchConn(elasticClient); err != nil {
+		if err := config.TestElasticsearchConn(elasticClient); err != nil {
 			errorLog.Fatalf("Unable to validate connection to Elasticsearch: %s", err)
 		}
 	} else {
-		if err := config.parseElasticsearchVersion(config.ElasticVersion); err != nil {
+		if err := config.ParseElasticsearchVersion(config.ElasticVersion); err != nil {
 			errorLog.Fatalf("Elasticsearch version must conform to major.minor.fix: %s", err)
 		}
 	}

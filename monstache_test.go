@@ -124,7 +124,7 @@ func TestMarshallEmptyArray(t *testing.T) {
 func TestParseElasticsearchVersion(t *testing.T) {
 	var err error
 	c := &ConfigOptions{}
-	err = c.parseElasticsearchVersion("6.2.4")
+	err = c.ParseElasticsearchVersion("6.2.4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,11 +134,11 @@ func TestParseElasticsearchVersion(t *testing.T) {
 	if c.ElasticMinorVersion != 2 {
 		t.Fatalf("Expect minor version 2")
 	}
-	err = c.parseElasticsearchVersion("")
+	err = c.ParseElasticsearchVersion("")
 	if err == nil {
 		t.Fatalf("Expected error for blank version")
 	}
-	err = c.parseElasticsearchVersion("0")
+	err = c.ParseElasticsearchVersion("0")
 	if err == nil {
 		t.Fatalf("Expected error for invalid version")
 	}
@@ -286,17 +286,17 @@ func TestSetElasticClientScheme(t *testing.T) {
 	c := &ConfigOptions{
 		ElasticUrls: []string{"https://example.com:9200"},
 	}
-	if c.needsSecureScheme() == false {
+	if c.NeedsSecureScheme() == false {
 		t.Fatalf("secure scheme should be required")
 	}
 	c = &ConfigOptions{
 		ElasticUrls: []string{"http://example.com:9200"},
 	}
-	if c.needsSecureScheme() {
+	if c.NeedsSecureScheme() {
 		t.Fatalf("secure scheme should not be required")
 	}
 	c = &ConfigOptions{}
-	if c.needsSecureScheme() {
+	if c.NeedsSecureScheme() {
 		t.Fatalf("secure scheme should not be required")
 	}
 }
