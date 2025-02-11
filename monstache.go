@@ -83,8 +83,8 @@ var pipePlugin func(string, bool) ([]interface{}, error)
 var mapEnvs = make(map[string]*executionEnv)
 var filterEnvs = make(map[string]*executionEnv)
 var pipeEnvs = make(map[string]*executionEnv)
-var mapIndexTypes = make(map[string]*indexMapping)
-var relates = make(map[string][]*relation)
+var mapIndexTypes = make(map[string]*IndexMapping)
+var relates = make(map[string][]*Relation)
 var fileNamespaces = make(map[string]bool)
 var patchNamespaces = make(map[string]bool)
 var tmNamespaces = make(map[string]bool)
@@ -122,19 +122,19 @@ const (
 	awsCredentialStrategyWebIdentity
 )
 
-type deleteStrategy int
+type DeleteStrategy int
 
 const (
-	statelessDeleteStrategy deleteStrategy = iota
+	statelessDeleteStrategy DeleteStrategy = iota
 	statefulDeleteStrategy
 	ignoreDeleteStrategy
 )
 
-type resumeStrategy int
+type ResumeStrategy int
 
 const (
-	timestampResumeStrategy resumeStrategy = iota
-	tokenResumeStrategy
+	TimestampResumeStrategy ResumeStrategy = iota
+	TokenResumeStrategy
 )
 
 type buildInfo struct {
@@ -142,7 +142,7 @@ type buildInfo struct {
 	VersionArray []int `bson:"versionArray"`
 }
 
-type stringargs []string
+type Stringargs []string
 
 type indexClient struct {
 	gtmCtx             *gtm.OpCtxMulti
@@ -201,7 +201,7 @@ type sigHandler struct {
 	clientStartedC chan *indexClient
 }
 
-type awsConnect struct {
+type AwsConnect struct {
 	Strategy            awsCredentialStrategy
 	AccessKey           string `toml:"access-key"`
 	SecretKey           string `toml:"secret-key"`
@@ -220,14 +220,14 @@ type executionEnv struct {
 	lock   *sync.Mutex
 }
 
-type javascript struct {
+type Javascript struct {
 	Namespace string
 	Script    string
 	Path      string
 	Routing   bool
 }
 
-type relation struct {
+type Relation struct {
 	Namespace      string
 	WithNamespace  string `toml:"with-namespace"`
 	SrcField       string `toml:"src-field"`
@@ -240,7 +240,7 @@ type relation struct {
 	col            string
 }
 
-type indexMapping struct {
+type IndexMapping struct {
 	Namespace string
 	Index     string
 	Pipeline  string
@@ -268,7 +268,7 @@ type findCall struct {
 	sel    map[string]int
 }
 
-type logRotate struct {
+type LogRotate struct {
 	MaxSize    int  `toml:"max-size"`
 	MaxAge     int  `toml:"max-age"`
 	MaxBackups int  `toml:"max-backups"`
@@ -276,7 +276,7 @@ type logRotate struct {
 	Compress   bool `toml:"compress"`
 }
 
-type logFiles struct {
+type LogFiles struct {
 	Info  string
 	Warn  string
 	Error string
@@ -297,14 +297,14 @@ type indexingMeta struct {
 	ID              string
 }
 
-type gtmSettings struct {
+type GtmSettings struct {
 	ChannelSize    int    `toml:"channel-size"`
 	BufferSize     int    `toml:"buffer-size"`
 	BufferDuration string `toml:"buffer-duration"`
 	MaxAwaitTime   string `toml:"max-await-time"`
 }
 
-type elasticPKIAuth struct {
+type ElasticPKIAuth struct {
 	CertFile string `toml:"cert-file"`
 	KeyFile  string `toml:"key-file"`
 }
@@ -348,12 +348,12 @@ type ConfigOptions struct {
 	MongoConfigURL              string         `toml:"mongo-config-url"`
 	MongoOpLogDatabaseName      string         `toml:"mongo-oplog-database-name"`
 	MongoOpLogCollectionName    string         `toml:"mongo-oplog-collection-name"`
-	GtmSettings                 gtmSettings    `toml:"gtm-settings"`
-	AWSConnect                  awsConnect     `toml:"aws-connect"`
-	LogRotate                   logRotate      `toml:"log-rotate"`
-	Logs                        logFiles       `toml:"logs"`
+	GtmSettings                 GtmSettings    `toml:"gtm-settings"`
+	AWSConnect                  AwsConnect     `toml:"aws-connect"`
+	LogRotate                   LogRotate      `toml:"log-rotate"`
+	Logs                        LogFiles       `toml:"logs"`
 	GraylogAddr                 string         `toml:"graylog-addr"`
-	ElasticUrls                 stringargs     `toml:"elasticsearch-urls"`
+	ElasticUrls                 Stringargs     `toml:"elasticsearch-urls"`
 	ElasticUser                 string         `toml:"elasticsearch-user"`
 	ElasticPassword             string         `toml:"elasticsearch-password"`
 	ElasticPemFile              string         `toml:"elasticsearch-pem-file"`
@@ -361,7 +361,7 @@ type ConfigOptions struct {
 	ElasticVersion              string         `toml:"elasticsearch-version"`
 	ElasticHealth0              int            `toml:"elasticsearch-healthcheck-timeout-startup"`
 	ElasticHealth1              int            `toml:"elasticsearch-healthcheck-timeout"`
-	ElasticPKIAuth              elasticPKIAuth `toml:"elasticsearch-pki-auth"`
+	ElasticPKIAuth              ElasticPKIAuth `toml:"elasticsearch-pki-auth"`
 	ElasticAPIKey               string         `toml:"elasticsearch-api-key"`
 	ResumeName                  string         `toml:"resume-name"`
 	NsRegex                     string         `toml:"namespace-regex"`
@@ -383,7 +383,7 @@ type ConfigOptions struct {
 	Gzip                        bool
 	Verbose                     bool
 	Resume                      bool
-	ResumeStrategy              resumeStrategy `toml:"resume-strategy"`
+	ResumeStrategy              ResumeStrategy `toml:"resume-strategy"`
 	ResumeWriteUnsafe           bool           `toml:"resume-write-unsafe"`
 	ResumeFromTimestamp         int64          `toml:"resume-from-timestamp"`
 	ResumeFromEarliestTimestamp bool           `toml:"resume-from-earliest-timestamp"`
@@ -412,19 +412,19 @@ type ConfigOptions struct {
 	ElasticMinorVersion         int
 	MaxFileSize                 int64 `toml:"max-file-size"`
 	ConfigFile                  string
-	Script                      []javascript
-	Filter                      []javascript
-	Pipeline                    []javascript
-	Mapping                     []indexMapping
-	Relate                      []relation
-	FileNamespaces              stringargs `toml:"file-namespaces"`
-	PatchNamespaces             stringargs `toml:"patch-namespaces"`
-	Workers                     stringargs
+	Script                      []Javascript
+	Filter                      []Javascript
+	Pipeline                    []Javascript
+	Mapping                     []IndexMapping
+	Relate                      []Relation
+	FileNamespaces              Stringargs `toml:"file-namespaces"`
+	PatchNamespaces             Stringargs `toml:"patch-namespaces"`
+	Workers                     Stringargs
 	Worker                      string
-	ChangeStreamNs              stringargs     `toml:"change-stream-namespaces"`
+	ChangeStreamNs              Stringargs     `toml:"change-stream-namespaces"`
 	DirectReadResumable         bool           `toml:"direct-read-resumable"`
 	DirectReadResumableIdOffset string         `toml:"direct-read-resumable-id-offset"` // 可断点直连同步，开始 offset 可指定，指定后就不再从数据库取 offset 了，仅支持 _id
-	DirectReadNs                stringargs     `toml:"direct-read-namespaces"`
+	DirectReadNs                Stringargs     `toml:"direct-read-namespaces"`
 	DirectReadSplitMax          int            `toml:"direct-read-split-max"`
 	DirectReadConcur            int            `toml:"direct-read-concur"`
 	DirectReadNoTimeout         bool           `toml:"direct-read-no-timeout"`
@@ -435,13 +435,13 @@ type ConfigOptions struct {
 	MapperPluginPath            string         `toml:"mapper-plugin-path"`
 	EnableHTTPServer            bool           `toml:"enable-http-server"`
 	HTTPServerAddr              string         `toml:"http-server-addr"`
-	TimeMachineNamespaces       stringargs     `toml:"time-machine-namespaces"`
+	TimeMachineNamespaces       Stringargs     `toml:"time-machine-namespaces"`
 	TimeMachineIndexPrefix      string         `toml:"time-machine-index-prefix"`
 	TimeMachineIndexSuffix      string         `toml:"time-machine-index-suffix"`
 	TimeMachineDirectReads      bool           `toml:"time-machine-direct-reads"`
 	PipeAllowDisk               bool           `toml:"pipe-allow-disk"`
-	RoutingNamespaces           stringargs     `toml:"routing-namespaces"`
-	DeleteStrategy              deleteStrategy `toml:"delete-strategy"`
+	RoutingNamespaces           Stringargs     `toml:"routing-namespaces"`
+	DeleteStrategy              DeleteStrategy `toml:"delete-strategy"`
 	DeleteIndexPattern          string         `toml:"delete-index-pattern"`
 	ConfigDatabaseName          string         `toml:"config-database-name"`
 	FileDownloaders             int            `toml:"file-downloaders"`
@@ -465,11 +465,11 @@ func (tr *ElasticAPIKeyTransport) RoundTrip(r *http.Request) (*http.Response, er
 	return tr.next.RoundTrip(r)
 }
 
-func (eca elasticPKIAuth) enabled() bool {
+func (eca ElasticPKIAuth) enabled() bool {
 	return eca.CertFile != "" || eca.KeyFile != ""
 }
 
-func (eca elasticPKIAuth) validate() error {
+func (eca ElasticPKIAuth) validate() error {
 	if eca.CertFile != "" && eca.KeyFile == "" {
 		return errors.New("Elasticsearch client auth key file is empty")
 	}
@@ -479,18 +479,18 @@ func (eca elasticPKIAuth) validate() error {
 	return nil
 }
 
-func (rel *relation) IsIdentity() bool {
+func (rel *Relation) IsIdentity() bool {
 	if rel.SrcField == "_id" && rel.MatchField == "_id" {
 		return true
 	}
 	return false
 }
 
-func (l *logFiles) enabled() bool {
+func (l *LogFiles) enabled() bool {
 	return l.Info != "" || l.Warn != "" || l.Error != "" || l.Trace != "" || l.Stats != ""
 }
 
-func (ac *awsConnect) validate() error {
+func (ac *AwsConnect) validate() error {
 	if ac.Strategy == awsCredentialStrategyStatic {
 		if ac.AccessKey == "" && ac.SecretKey == "" {
 			return nil
@@ -502,25 +502,25 @@ func (ac *awsConnect) validate() error {
 	return nil
 }
 
-func (ac *awsConnect) enabled() bool {
+func (ac *AwsConnect) enabled() bool {
 	if ac.Strategy == awsCredentialStrategyStatic {
 		return ac.AccessKey != "" || ac.SecretKey != ""
 	}
 	return true
 }
 
-func (ac *awsConnect) forceExpireCreds() bool {
+func (ac *AwsConnect) forceExpireCreds() bool {
 	return ac.enabled() && ac.ForceExpire != "" && ac.creds != nil
 }
 
-func (ac *awsConnect) watchCreds() bool {
+func (ac *AwsConnect) watchCreds() bool {
 	if ac.enabled() && ac.creds != nil && ac.WatchCredentials {
 		return ac.Strategy == awsCredentialStrategyFile || ac.Strategy == awsCredentialStrategyChained
 	}
 	return false
 }
 
-func (ac *awsConnect) watchFilePath() string {
+func (ac *AwsConnect) watchFilePath() string {
 	if ac.CredentialsWatchDir != "" {
 		return ac.CredentialsWatchDir
 	}
@@ -533,39 +533,39 @@ func (ac *awsConnect) watchFilePath() string {
 	return filepath.Join(homeDir, ".aws")
 }
 
-func (arg *deleteStrategy) String() string {
+func (arg *DeleteStrategy) String() string {
 	return fmt.Sprintf("%d", *arg)
 }
 
-func (arg *deleteStrategy) Set(value string) (err error) {
+func (arg *DeleteStrategy) Set(value string) (err error) {
 	var i int
 	if i, err = strconv.Atoi(value); err != nil {
 		return
 	}
-	ds := deleteStrategy(i)
+	ds := DeleteStrategy(i)
 	*arg = ds
 	return
 }
 
-func (arg *resumeStrategy) String() string {
+func (arg *ResumeStrategy) String() string {
 	return fmt.Sprintf("%d", *arg)
 }
 
-func (arg *resumeStrategy) Set(value string) (err error) {
+func (arg *ResumeStrategy) Set(value string) (err error) {
 	var i int
 	if i, err = strconv.Atoi(value); err != nil {
 		return
 	}
-	rs := resumeStrategy(i)
+	rs := ResumeStrategy(i)
 	*arg = rs
 	return
 }
 
-func (args *stringargs) String() string {
+func (args *Stringargs) String() string {
 	return fmt.Sprintf("%s", *args)
 }
 
-func (args *stringargs) Set(value string) error {
+func (args *Stringargs) Set(value string) error {
 	*args = append(*args, value)
 	return nil
 }
@@ -852,14 +852,14 @@ func (ic *indexClient) ensureFileMapping() (err error) {
 	return err
 }
 
-func (ic *indexClient) defaultIndexMapping(op *gtm.Op) *indexMapping {
-	return &indexMapping{
+func (ic *indexClient) defaultIndexMapping(op *gtm.Op) *IndexMapping {
+	return &IndexMapping{
 		Namespace: op.Namespace,
 		Index:     strings.ToLower(op.Namespace),
 	}
 }
 
-func (ic *indexClient) mapIndex(op *gtm.Op) *indexMapping {
+func (ic *indexClient) mapIndex(op *gtm.Op) *IndexMapping {
 	mapping := ic.defaultIndexMapping(op)
 	if m := mapIndexTypes[op.Namespace]; m != nil {
 		if m.Index != "" {
@@ -1925,7 +1925,7 @@ func (config *ConfigOptions) LoadReplacements() {
 					errorLog.Fatalf("Replacement namespace is invalid: %s", r.WithNamespace)
 				}
 				database, collection := dbCol[0], dbCol[1]
-				r := &relation{
+				r := &Relation{
 					Namespace:      r.Namespace,
 					WithNamespace:  r.WithNamespace,
 					SrcField:       r.SrcField,
@@ -1955,7 +1955,7 @@ func (config *ConfigOptions) LoadIndexTypes() {
 	if config.Mapping != nil {
 		for _, m := range config.Mapping {
 			if m.Namespace != "" && m.Index != "" {
-				mapIndexTypes[m.Namespace] = &indexMapping{
+				mapIndexTypes[m.Namespace] = &IndexMapping{
 					Namespace: m.Namespace,
 					Index:     strings.ToLower(m.Index),
 				}
@@ -3152,7 +3152,7 @@ func (ic *indexClient) hasFileContent(op *gtm.Op) (ingest bool) {
 }
 
 func (ic *indexClient) addPatch(op *gtm.Op, objectID string,
-	indexType *indexMapping, meta *indexingMeta) (err error) {
+	indexType *IndexMapping, meta *indexingMeta) (err error) {
 	var merges []interface{}
 	var toJSON []byte
 	if op.IsSourceDirect() {
@@ -4222,8 +4222,8 @@ func (ic *indexClient) doDelete(op *gtm.Op) {
 	ic.bulk.Add(req)
 }
 
-func logRotateDefaults() logRotate {
-	return logRotate{
+func logRotateDefaults() LogRotate {
+	return LogRotate{
 		MaxSize:    500, //megabytes
 		MaxAge:     28,  // days
 		MaxBackups: 5,
@@ -4232,8 +4232,8 @@ func logRotateDefaults() logRotate {
 	}
 }
 
-func gtmDefaultSettings() gtmSettings {
-	return gtmSettings{
+func gtmDefaultSettings() GtmSettings {
+	return GtmSettings{
 		ChannelSize:    gtmChannelSizeDefault,
 		BufferSize:     32,
 		BufferDuration: "75ms",
@@ -4725,7 +4725,7 @@ func (ic *indexClient) dialShards() []*mongo.Client {
 func (ic *indexClient) buildTokenGen() gtm.ResumeTokenGenenerator {
 	config := ic.config
 	var token gtm.ResumeTokenGenenerator
-	if !config.Resume || (config.ResumeStrategy != tokenResumeStrategy) {
+	if !config.Resume || (config.ResumeStrategy != TokenResumeStrategy) {
 		return token
 	}
 	token = func(client *mongo.Client, streamID string, options *gtm.Options) (interface{}, error) {
@@ -4754,7 +4754,7 @@ func (ic *indexClient) buildTokenGen() gtm.ResumeTokenGenenerator {
 func (ic *indexClient) buildTimestampGen() gtm.TimestampGenerator {
 	var after gtm.TimestampGenerator
 	config := ic.config
-	if config.ResumeStrategy != timestampResumeStrategy {
+	if config.ResumeStrategy != TimestampResumeStrategy {
 		return after
 	}
 	if config.Replay {
@@ -5030,7 +5030,7 @@ func (ic *indexClient) startListen() {
 	config := ic.config
 	conns := ic.buildConnections()
 
-	if config.ResumeStrategy == timestampResumeStrategy {
+	if config.ResumeStrategy == TimestampResumeStrategy {
 		if config.ResumeFromEarliestTimestamp {
 			ic.oplogTsResolver = oplog.NewTimestampResolverEarliest(len(conns), infoLog)
 		} else {
@@ -5201,7 +5201,7 @@ func (ic *indexClient) eventLoop() {
 			if !ic.enabled {
 				break
 			}
-			if ic.config.ResumeStrategy == tokenResumeStrategy {
+			if ic.config.ResumeStrategy == TokenResumeStrategy {
 				ic.nextTokens()
 			} else {
 				ic.nextTimestamp()
@@ -5251,7 +5251,7 @@ func (ic *indexClient) eventLoop() {
 				// A 32-bit integer representing the number of seconds since the Unix epoch
 				metrics.CurrentOpsTime.Set(float64(ic.lastTs.T))
 
-				if ic.config.ResumeStrategy == tokenResumeStrategy {
+				if ic.config.ResumeStrategy == TokenResumeStrategy {
 					ic.tokens[op.ResumeToken.StreamID] = op.ResumeToken.ResumeToken
 				}
 			} else if ic.config.DirectReadResumable {
@@ -5465,11 +5465,11 @@ func validateFeatures(config *ConfigOptions, mongoInfo *buildInfo) {
 	if streamsConfigured && !streamsSupported {
 		errorLog.Println(featErr1)
 	}
-	if config.ResumeStrategy == timestampResumeStrategy {
+	if config.ResumeStrategy == TimestampResumeStrategy {
 		if streamsConfigured && !startAtOperationTimeSupported {
 			errorLog.Println(featErr2)
 		}
-	} else if config.ResumeStrategy == tokenResumeStrategy {
+	} else if config.ResumeStrategy == TokenResumeStrategy {
 		if !streamsSupported {
 			errorLog.Println(featErr3)
 		}
