@@ -23,7 +23,7 @@ func TestToTomlString(t *testing.T) {
 			Password: "",
 		},
 	}
-	tomlStr := ToTomlString(&configOptions{SinkConfig: sinks.SinkConfig{
+	tomlStr := ToTomlString(&ConfigOptions{SinkConfig: sinks.SinkConfig{
 		ClickHouseConfig: clickhouseConfig,
 		KafkaConfig: kafka.Config{
 			Enabled:          false,

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func ToTomlString(config *configOptions) string {
+func ToTomlString(config *ConfigOptions) string {
 	var sb strings.Builder
 	err := toml.NewEncoder(&sb).Encode(config)
 	if err != nil {

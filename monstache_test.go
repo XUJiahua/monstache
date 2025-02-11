@@ -123,7 +123,7 @@ func TestMarshallEmptyArray(t *testing.T) {
 
 func TestParseElasticsearchVersion(t *testing.T) {
 	var err error
-	c := &configOptions{}
+	c := &ConfigOptions{}
 	err = c.parseElasticsearchVersion("6.2.4")
 	if err != nil {
 		t.Fatal(err)
@@ -283,19 +283,19 @@ func TestPruneInvalidJSON(t *testing.T) {
 }
 
 func TestSetElasticClientScheme(t *testing.T) {
-	c := &configOptions{
+	c := &ConfigOptions{
 		ElasticUrls: []string{"https://example.com:9200"},
 	}
 	if c.needsSecureScheme() == false {
 		t.Fatalf("secure scheme should be required")
 	}
-	c = &configOptions{
+	c = &ConfigOptions{
 		ElasticUrls: []string{"http://example.com:9200"},
 	}
 	if c.needsSecureScheme() {
 		t.Fatalf("secure scheme should not be required")
 	}
-	c = &configOptions{}
+	c = &ConfigOptions{}
 	if c.needsSecureScheme() {
 		t.Fatalf("secure scheme should not be required")
 	}

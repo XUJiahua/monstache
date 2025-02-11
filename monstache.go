@@ -146,7 +146,7 @@ type stringargs []string
 
 type indexClient struct {
 	gtmCtx             *gtm.OpCtxMulti
-	config             *configOptions
+	config             *ConfigOptions
 	mongo              *mongo.Client
 	mongoConfig        *mongo.Client
 	sinkConnector      sinks.SinkConnector
@@ -312,7 +312,7 @@ type elasticPKIAuth struct {
 type httpServerCtx struct {
 	httpServer *http.Server
 	bulk       *elastic.BulkProcessor
-	config     *configOptions
+	config     *ConfigOptions
 	shutdown   bool
 	started    time.Time
 	statusReqC chan *statusRequest
@@ -341,7 +341,7 @@ type statusRequest struct {
 	responseC chan *statusResponse
 }
 
-type configOptions struct {
+type ConfigOptions struct {
 	EnableTemplate              bool
 	EnvDelimiter                string
 	MongoURL                    string         `toml:"mongo-url"`
@@ -570,19 +570,19 @@ func (args *stringargs) Set(value string) error {
 	return nil
 }
 
-func (config *configOptions) readShards() bool {
+func (config *ConfigOptions) readShards() bool {
 	return len(config.ChangeStreamNs) == 0 && config.MongoConfigURL != ""
 }
 
-func (config *configOptions) dynamicDirectReadList() bool {
+func (config *ConfigOptions) dynamicDirectReadList() bool {
 	return len(config.DirectReadNs) == 1 && config.DirectReadNs[0] == ""
 }
 
-func (config *configOptions) ignoreDatabaseForDirectReads(db string) bool {
+func (config *ConfigOptions) ignoreDatabaseForDirectReads(db string) bool {
 	return db == "local" || db == "admin" || db == "config" || db == config.ConfigDatabaseName
 }
 
-func (config *configOptions) ignoreCollectionForDirectReads(col string) bool {
+func (config *ConfigOptions) ignoreCollectionForDirectReads(col string) bool {
 	return strings.HasPrefix(col, "system.")
 }
 
@@ -691,7 +691,7 @@ func (ic *indexClient) backoff(wait time.Duration) {
 	}
 }
 
-func (config *configOptions) parseElasticsearchVersion(number string) (err error) {
+func (config *ConfigOptions) parseElasticsearchVersion(number string) (err error) {
 	if number == "" {
 		err = errors.New("Elasticsearch version cannot be blank")
 	} else {
@@ -740,7 +740,7 @@ func (ic *indexClient) newStatsBulkProcessor(client *elastic.Client) (bulk *elas
 	return bulkService.Do(context.Background())
 }
 
-func (config *configOptions) needsSecureScheme() bool {
+func (config *ConfigOptions) needsSecureScheme() bool {
 	if len(config.ElasticUrls) > 0 {
 		for _, url := range config.ElasticUrls {
 			if strings.HasPrefix(url, "https") {
@@ -752,7 +752,7 @@ func (config *configOptions) needsSecureScheme() bool {
 
 }
 
-func (config *configOptions) newElasticClient() (client *elastic.Client, err error) {
+func (config *ConfigOptions) newElasticClient() (client *elastic.Client, err error) {
 	var clientOptions []elastic.ClientOptionFunc
 	var httpClient *http.Client
 	clientOptions = append(clientOptions, elastic.SetSniff(false))
@@ -788,7 +788,7 @@ func (config *configOptions) newElasticClient() (client *elastic.Client, err err
 	return elastic.NewClient(clientOptions...)
 }
 
-func (config *configOptions) testElasticsearchConn(client *elastic.Client) (err error) {
+func (config *ConfigOptions) testElasticsearchConn(client *elastic.Client) (err error) {
 	var number string
 	url := config.ElasticUrls[0]
 	number, err = client.ElasticsearchVersion(url)
@@ -1492,7 +1492,7 @@ func (ic *indexClient) addFileContent(op *gtm.Op) (err error) {
 	return
 }
 
-func notMonstache(config *configOptions) gtm.OpFilter {
+func notMonstache(config *ConfigOptions) gtm.OpFilter {
 	db := config.ConfigDatabaseName
 	return func(op *gtm.Op) bool {
 		return op.GetDatabase() != db
@@ -1818,7 +1818,7 @@ func (ic *indexClient) saveDirectReadNamespaces() (err error) {
 	return
 }
 
-func (config *configOptions) parseCommandLineFlags() *configOptions {
+func (config *ConfigOptions) parseCommandLineFlags() *ConfigOptions {
 	flag.BoolVar(&config.Print, "print-config", false, "Print the configuration and then exit")
 	flag.BoolVar(&config.EnableTemplate, "tpl", false, "True to interpret the config file as a template")
 	flag.StringVar(&config.EnvDelimiter, "env-delimiter", ",", "A delimiter to use when splitting environment variable values")
@@ -1916,7 +1916,7 @@ func (config *configOptions) parseCommandLineFlags() *configOptions {
 	return config
 }
 
-func (config *configOptions) loadReplacements() {
+func (config *ConfigOptions) loadReplacements() {
 	if config.Relate != nil {
 		for _, r := range config.Relate {
 			if r.Namespace != "" || r.WithNamespace != "" {
@@ -1951,7 +1951,7 @@ func (config *configOptions) loadReplacements() {
 	}
 }
 
-func (config *configOptions) loadIndexTypes() {
+func (config *ConfigOptions) loadIndexTypes() {
 	if config.Mapping != nil {
 		for _, m := range config.Mapping {
 			if m.Namespace != "" && m.Index != "" {
@@ -1966,7 +1966,7 @@ func (config *configOptions) loadIndexTypes() {
 	}
 }
 
-func (config *configOptions) loadPipelines() {
+func (config *ConfigOptions) loadPipelines() {
 	for _, s := range config.Pipeline {
 		if s.Path == "" && s.Script == "" {
 			errorLog.Fatalln("Pipelines must specify path or script attributes")
@@ -2008,7 +2008,7 @@ func (config *configOptions) loadPipelines() {
 	}
 }
 
-func (config *configOptions) loadFilters() {
+func (config *ConfigOptions) loadFilters() {
 	for _, s := range config.Filter {
 		if s.Script != "" || s.Path != "" {
 			if s.Path != "" && s.Script != "" {
@@ -2065,7 +2065,7 @@ func jsStringFromBinData(call otto.FunctionCall) otto.Value {
 	return s
 }
 
-func (config *configOptions) loadScripts() {
+func (config *ConfigOptions) loadScripts() {
 	for _, s := range config.Script {
 		if s.Script != "" || s.Path != "" {
 			if s.Path != "" && s.Script != "" {
@@ -2109,7 +2109,7 @@ func (config *configOptions) loadScripts() {
 	}
 }
 
-func (config *configOptions) loadPlugins() *configOptions {
+func (config *ConfigOptions) loadPlugins() *ConfigOptions {
 	if config.MapperPluginPath != "" {
 		funcDefined := false
 		p, err := plugin.Open(config.MapperPluginPath)
@@ -2164,7 +2164,7 @@ func (config *configOptions) loadPlugins() *configOptions {
 	return config
 }
 
-func (config *configOptions) decodeAsTemplate() *configOptions {
+func (config *ConfigOptions) decodeAsTemplate() *ConfigOptions {
 	env := map[string]string{}
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)
@@ -2192,9 +2192,9 @@ func (config *configOptions) decodeAsTemplate() *configOptions {
 	return config
 }
 
-func (config *configOptions) loadConfigFile() *configOptions {
+func (config *ConfigOptions) loadConfigFile() *ConfigOptions {
 	if config.ConfigFile != "" {
-		var tomlConfig = configOptions{
+		var tomlConfig = ConfigOptions{
 			ConfigFile:             config.ConfigFile,
 			LogRotate:              config.LogRotate,
 			DroppedDatabases:       true,
@@ -2516,7 +2516,7 @@ func (config *configOptions) loadConfigFile() *configOptions {
 	return config
 }
 
-func (config *configOptions) newLogger(path string) *lumberjack.Logger {
+func (config *ConfigOptions) newLogger(path string) *lumberjack.Logger {
 	return &lumberjack.Logger{
 		Filename:   path,
 		MaxSize:    config.LogRotate.MaxSize,
@@ -2527,7 +2527,7 @@ func (config *configOptions) newLogger(path string) *lumberjack.Logger {
 	}
 }
 
-func (config *configOptions) setupLogging() *configOptions {
+func (config *ConfigOptions) setupLogging() *ConfigOptions {
 	if config.GraylogAddr != "" {
 		gelfWriter, err := gelf.NewUDPWriter(config.GraylogAddr)
 		if err != nil {
@@ -2559,7 +2559,7 @@ func (config *configOptions) setupLogging() *configOptions {
 	return config
 }
 
-func (config *configOptions) build() *configOptions {
+func (config *ConfigOptions) build() *ConfigOptions {
 	config.loadEnvironment()
 	config.loadTimeMachineNamespaces()
 	config.loadRoutingNamespaces()
@@ -2571,7 +2571,7 @@ func (config *configOptions) build() *configOptions {
 	return config
 }
 
-func (config *configOptions) loadEnvironment() *configOptions {
+func (config *ConfigOptions) loadEnvironment() *ConfigOptions {
 	del := config.EnvDelimiter
 	if del == "" {
 		del = ","
@@ -2774,7 +2774,7 @@ func (config *configOptions) loadEnvironment() *configOptions {
 	return config
 }
 
-func (config *configOptions) loadVariableValueFromFile(name string, path string) (n string, v string, err error) {
+func (config *ConfigOptions) loadVariableValueFromFile(name string, path string) (n string, v string, err error) {
 	name = strings.TrimSuffix(name, "__FILE")
 	f, err := os.Open(path)
 	if err != nil {
@@ -2788,35 +2788,35 @@ func (config *configOptions) loadVariableValueFromFile(name string, path string)
 	return name, string(c), nil
 }
 
-func (config *configOptions) loadRoutingNamespaces() *configOptions {
+func (config *ConfigOptions) loadRoutingNamespaces() *ConfigOptions {
 	for _, namespace := range config.RoutingNamespaces {
 		routingNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *configOptions) loadTimeMachineNamespaces() *configOptions {
+func (config *ConfigOptions) loadTimeMachineNamespaces() *ConfigOptions {
 	for _, namespace := range config.TimeMachineNamespaces {
 		tmNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *configOptions) loadPatchNamespaces() *configOptions {
+func (config *ConfigOptions) loadPatchNamespaces() *ConfigOptions {
 	for _, namespace := range config.PatchNamespaces {
 		patchNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config *configOptions) loadGridFsConfig() *configOptions {
+func (config *ConfigOptions) loadGridFsConfig() *ConfigOptions {
 	for _, namespace := range config.FileNamespaces {
 		fileNamespaces[namespace] = true
 	}
 	return config
 }
 
-func (config configOptions) dump() {
+func (config ConfigOptions) dump() {
 	if config.MongoURL != "" {
 		config.MongoURL = cleanMongoURL(config.MongoURL)
 	}
@@ -2846,7 +2846,7 @@ func (config configOptions) dump() {
 	}
 }
 
-func (config *configOptions) validate() {
+func (config *ConfigOptions) validate() {
 	if config.DisableChangeEvents && len(config.DirectReadNs) == 0 {
 		errorLog.Fatalln("Direct read namespaces must be specified if change events are disabled")
 	}
@@ -2871,7 +2871,7 @@ func (config *configOptions) validate() {
 	}
 }
 
-func (config *configOptions) setDefaults() *configOptions {
+func (config *ConfigOptions) setDefaults() *ConfigOptions {
 	if !config.EnableOplog && len(config.ChangeStreamNs) == 0 {
 		config.ChangeStreamNs = []string{""}
 	}
@@ -2991,7 +2991,7 @@ func cleanMongoURL(URL string) string {
 	return url
 }
 
-func (config *configOptions) dialMongo(URL string) (*mongo.Client, error) {
+func (config *ConfigOptions) dialMongo(URL string) (*mongo.Client, error) {
 	var clientOptions *options.ClientOptions
 	if config.mongoClientOptions == nil {
 		// use the initial URL to create most of the client options
@@ -3026,7 +3026,7 @@ func (config *configOptions) dialMongo(URL string) (*mongo.Client, error) {
 	return client, nil
 }
 
-func (config *configOptions) NewHTTPClient() (client *http.Client, err error) {
+func (config *ConfigOptions) NewHTTPClient() (client *http.Client, err error) {
 	tlsConfig := &tls.Config{}
 	if config.ElasticPemFile != "" {
 		var ca []byte
@@ -3669,7 +3669,7 @@ func (meta *indexingMeta) load(metaAttrs map[string]interface{}) {
 	}
 }
 
-func (meta *indexingMeta) shouldSave(config *configOptions) bool {
+func (meta *indexingMeta) shouldSave(config *ConfigOptions) bool {
 	if config.DeleteStrategy == statefulDeleteStrategy {
 		return (meta.Routing != "" ||
 			meta.Index != "" ||
@@ -3739,12 +3739,12 @@ func (ic *indexClient) getIndexMeta(namespace, id string) (meta *indexingMeta) {
 	return
 }
 
-func loadBuiltinFunctions(client *mongo.Client, config *configOptions) {
+func loadBuiltinFunctions(client *mongo.Client, config *ConfigOptions) {
 	scriptEnvMaps := []map[string]*executionEnv{mapEnvs, filterEnvs}
 	loadBuiltinFunctionsForEnvs(scriptEnvMaps, client, config)
 }
 
-func loadBuiltinFunctionsForEnvs(envMaps []map[string]*executionEnv, client *mongo.Client, config *configOptions) {
+func loadBuiltinFunctionsForEnvs(envMaps []map[string]*executionEnv, client *mongo.Client, config *ConfigOptions) {
 	for _, envMap := range envMaps {
 		for ns, env := range envMap {
 			var fa *findConf
@@ -4405,7 +4405,7 @@ func (ic *indexClient) notifySd() {
 	}
 }
 
-func (config *configOptions) makeShardInsertHandler() gtm.ShardInsertHandler {
+func (config *ConfigOptions) makeShardInsertHandler() gtm.ShardInsertHandler {
 	return func(shardInfo *gtm.ShardInfo) (*mongo.Client, error) {
 		shardURL := shardInfo.GetURL()
 		infoLog.Printf("Adding shard found at %s\n", cleanMongoURL(shardURL))
@@ -4413,7 +4413,7 @@ func (config *configOptions) makeShardInsertHandler() gtm.ShardInsertHandler {
 	}
 }
 
-func buildPipe(config *configOptions) func(string, bool) ([]interface{}, error) {
+func buildPipe(config *ConfigOptions) func(string, bool) ([]interface{}, error) {
 	if pipePlugin != nil {
 		return pipePlugin
 	} else if len(pipeEnvs) > 0 {
@@ -4793,10 +4793,12 @@ func (ic *indexClient) buildTimestampGen() gtm.TimestampGenerator {
 				}
 			}
 			if candidateTs.T == 0 {
+				// 如果数据库中没有 resume checkpoint，就从最新的（最后一条） oplog开始同步
 				candidateTs, _ = gtm.LastOpTimestamp(client, options)
 				tsSource = oplog.TS_SOURCE_OPLOG
 			}
 
+			// 这里 ts 相当于 candidateTs
 			ts := <-ic.oplogTsResolver.GetResumeTimestamp(candidateTs, tsSource)
 			infoLog.Printf("Resuming from timestamp %+v, from source %s", ts, tsSource)
 			return ts, nil
@@ -5032,6 +5034,7 @@ func (ic *indexClient) startListen() {
 		if config.ResumeFromEarliestTimestamp {
 			ic.oplogTsResolver = oplog.NewTimestampResolverEarliest(len(conns), infoLog)
 		} else {
+			// 那就是用的这个 timestamp resovler
 			ic.oplogTsResolver = oplog.TimestampResolverSimple{}
 		}
 	}
@@ -5428,8 +5431,8 @@ func (ic *indexClient) saveTimestampFromReplStatus() {
 	}
 }
 
-func mustConfig() *configOptions {
-	config := &configOptions{
+func MustConfig() *ConfigOptions {
+	config := &ConfigOptions{
 		GtmSettings: gtmDefaultSettings(),
 		LogRotate:   logRotateDefaults(),
 	}
@@ -5448,7 +5451,7 @@ func mustConfig() *configOptions {
 	return config
 }
 
-func validateFeatures(config *configOptions, mongoInfo *buildInfo) {
+func validateFeatures(config *ConfigOptions, mongoInfo *buildInfo) {
 	if len(mongoInfo.VersionArray) < 2 {
 		return
 	}
@@ -5478,7 +5481,7 @@ func validateFeatures(config *configOptions, mongoInfo *buildInfo) {
 	}
 }
 
-func buildMongoClient(config *configOptions) *mongo.Client {
+func buildMongoClient(config *ConfigOptions) *mongo.Client {
 	mongoClient, err := config.dialMongo(config.MongoURL)
 	if err != nil {
 		errorLog.Fatalf("Unable to connect to MongoDB using URL %s: %s",
@@ -5497,7 +5500,7 @@ func buildMongoClient(config *configOptions) *mongo.Client {
 	return mongoClient
 }
 
-func buildElasticClient(config *configOptions) *elastic.Client {
+func buildElasticClient(config *ConfigOptions) *elastic.Client {
 	elasticClient, err := config.newElasticClient()
 	if err != nil {
 		errorLog.Fatalf("Unable to create Elasticsearch client: %s", err)
@@ -5515,7 +5518,7 @@ func buildElasticClient(config *configOptions) *elastic.Client {
 }
 
 func main() {
-	config := mustConfig()
+	config := MustConfig()
 	if config.Verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
