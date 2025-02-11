@@ -453,6 +453,8 @@ type ConfigOptions struct {
 	mongoClientOptions          *options.ClientOptions
 	SinkConfig                  sinks.SinkConfig `toml:"sink"`
 	ExitOnBackoff               bool             `toml:"exit-on-backoff"`
+	Duck                        bool             `toml:"duck"`
+	OplogRecoverFilepath        string           `toml:"oplog-recover-filepath"`
 }
 
 type ElasticAPIKeyTransport struct {
@@ -1850,6 +1852,7 @@ func (config *ConfigOptions) ParseCommandLineFlags() *ConfigOptions {
 	flag.BoolVar(&config.Version, "v", false, "True to print the version number")
 	flag.BoolVar(&config.Gzip, "gzip", false, "True to enable gzip for requests to Elasticsearch")
 	flag.BoolVar(&config.Verbose, "verbose", false, "True to output verbose messages")
+	flag.BoolVar(&config.Duck, "duck", false, "True to switch to duck")
 	flag.BoolVar(&config.ExitOnBackoff, "exit-on-backoff", false, "True to kill itself if backoff")
 	flag.BoolVar(&config.Pprof, "pprof", false, "True to enable pprof endpoints")
 	flag.BoolVar(&config.EnableOplog, "enable-oplog", false, "True to enable direct tailing of the oplog")
@@ -5534,6 +5537,11 @@ func main() {
 
 	mongoClient := buildMongoClient(config)
 	loadBuiltinFunctions(mongoClient, config)
+
+	if config.Duck {
+		Duck(mongoClient, config)
+		return
+	}
 
 	ic := &indexClient{
 		config:         config,
