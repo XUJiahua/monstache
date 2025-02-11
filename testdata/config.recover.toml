@@ -30,6 +30,8 @@ relate-buffer = 0
 post-processors = 0
 
 exit-on-backoff = true
+# ./monstache -f testdata/config.recover.toml
+oplog-recover-filepath = "testdata/op2.csv"
 
 [sink]
 [sink.clickhouse]
