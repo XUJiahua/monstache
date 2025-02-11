@@ -1,0 +1,54 @@
+mongo-url = "mongodb://10.30.11.112:27017,10.30.11.112:27018,10.30.11.112:27019"
+namespace-regex = ""
+namespace-drop-regex = ""
+namespace-exclude-regex = ""
+namespace-drop-exclude-regex = ""
+enable-oplog = true
+disable-change-events = false
+disable-delete-protection = false
+enable-easy-json = false
+index-stats = false
+stats-duration = ""
+stats-index-format = ""
+resume = true
+resume-name = "ch-v2.checkpoint.sha-bkk"
+resume-strategy = 0
+resume-write-unsafe = false
+resume-from-timestamp = 0
+resume-from-earliest-timestamp = false
+fail-fast = false
+merge-patch-attribute = ""
+mapper-plugin-path = ""
+enable-http-server = true
+http-server-addr = ""
+delete-strategy = 0
+delete-index-pattern = ""
+config-database-name = ""
+file-downloaders = 0
+relate-threads = 0
+relate-buffer = 0
+post-processors = 0
+
+exit-on-backoff = true
+
+[sink]
+[sink.clickhouse]
+enabled = true
+endpoint = "http://10.30.11.112:8123"
+endpoint-tcp = "10.30.11.112:9000"
+skip-unknown-fields = true
+date-time-best-effort = true
+database = "evocloud"
+table-prefix = "click_"
+table-suffix = "_v1"
+dump-on-error = true
+preprocess-namespace-regex = "^evosettle-sha\\.evo\\.pspOutgoing$"
+
+[sink.clickhouse.auth]
+user = "default"
+password = ""
+
+[sink.bulk]
+workers = 4
+batch-size = 1000
+flush-interval-seconds = 5
