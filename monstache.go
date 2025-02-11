@@ -2217,6 +2217,9 @@ func (config *ConfigOptions) LoadConfigFile() *ConfigOptions {
 		if config.MongoURL == "" {
 			config.MongoURL = tomlConfig.MongoURL
 		}
+		if config.OplogRecoverFilepath == "" {
+			config.OplogRecoverFilepath = tomlConfig.OplogRecoverFilepath
+		}
 		if config.MongoConfigURL == "" {
 			config.MongoConfigURL = tomlConfig.MongoConfigURL
 		}
@@ -4633,28 +4636,31 @@ func (ic *indexClient) stopAllWorkers() {
 
 func (ic *indexClient) startReadWait() {
 	directReadsEnabled := len(ic.config.DirectReadNs) > 0
-	if directReadsEnabled {
-		exitAfterDirectReads := ic.config.ExitAfterDirectReads
-		go func() {
-			ic.gtmCtx.DirectReadWg.Wait()
-			if ic.config.Resume {
-				ic.saveTimestampFromReplStatus()
-			}
-			if ic.config.DirectReadResumable {
-				ic.nextId()
-			}
-			if exitAfterDirectReads {
-				var exit bool
-				ic.rwmutex.RLock()
-				exit = !ic.externalShutdown
-				ic.rwmutex.RUnlock()
-				if exit {
-					ic.stopAllWorkers()
-					ic.doneC <- 30
-				}
-			}
-		}()
+	if !directReadsEnabled {
+		return
 	}
+
+	exitAfterDirectReads := ic.config.ExitAfterDirectReads
+	go func() {
+		// direct read goroutine 完成，允许进程退出
+		ic.gtmCtx.DirectReadWg.Wait()
+		if ic.config.Resume {
+			ic.saveTimestampFromReplStatus()
+		}
+		if ic.config.DirectReadResumable {
+			ic.nextId()
+		}
+		if exitAfterDirectReads {
+			var exit bool
+			ic.rwmutex.RLock()
+			exit = !ic.externalShutdown
+			ic.rwmutex.RUnlock()
+			if exit {
+				ic.stopAllWorkers()
+				ic.doneC <- 30
+			}
+		}
+	}()
 }
 
 func (ic *indexClient) startExpireCreds() {
@@ -5025,6 +5031,8 @@ func (ic *indexClient) buildGtmOptions() *gtm.Options {
 		ChangeStreamNs:      config.ChangeStreamNs,
 		DirectReadBounded:   config.DirectReadBounded,
 		MaxAwaitTime:        ic.parseMaxAwaitTime(),
+		// 如果指定了从文件恢复 oplog，就不再订阅 MongoDB 的 oplog
+		OplogRecoverFilepath: config.OplogRecoverFilepath,
 	}
 	return gtmOpts
 }
