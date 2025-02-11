@@ -4636,7 +4636,7 @@ func (ic *indexClient) stopAllWorkers() {
 
 func (ic *indexClient) startReadWait() {
 	directReadsEnabled := len(ic.config.DirectReadNs) > 0
-	if !directReadsEnabled {
+	if !directReadsEnabled && ic.config.OplogRecoverFilepath == "" {
 		return
 	}
 
@@ -4644,6 +4644,7 @@ func (ic *indexClient) startReadWait() {
 	go func() {
 		// direct read goroutine 完成，允许进程退出
 		ic.gtmCtx.DirectReadWg.Wait()
+		logrus.Debug("gtmCtx.DirectReadWg.Wait() completed")
 		if ic.config.Resume {
 			ic.saveTimestampFromReplStatus()
 		}
