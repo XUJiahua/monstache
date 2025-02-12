@@ -1,7 +1,8 @@
 module github.com/rwynn/monstache/v6
 
 // https://github.com/rwynn/gtm/compare/master...XUJiahua:gtm:resumable?expand=1
-replace github.com/rwynn/gtm/v2 => github.com/XUJiahua/gtm/v2 v2.0.0-20240820012615-8a6c33d2ac5c
+// https://github.com/XUJiahua/gtm/compare/resumable...XUJiahua:gtm:oplog-recover?expand=1
+replace github.com/rwynn/gtm/v2 => github.com/XUJiahua/gtm/v2 v2.0.0-20250212070124-ed126f6ae0bf
 
 //replace github.com/rwynn/gtm/v2 => ../gtm
 
@@ -11,8 +12,10 @@ require (
 	github.com/aws/aws-sdk-go v1.44.239
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
+	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/fsnotify/fsnotify v1.5.1
+	github.com/google/uuid v1.6.0
 	github.com/olivere/elastic/v7 v7.0.31
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
@@ -33,11 +36,9 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
