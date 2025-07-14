@@ -1,6 +1,7 @@
 package view
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"sync"
@@ -86,6 +87,27 @@ func (m *ViewManager) views() ([]string, error) {
 	return views, nil
 }
 
+// TableFieldInfo 表示表和字段信息的结构
+type TableFieldInfo struct {
+	Table  string   `json:"table"`
+	Fields []string `json:"fields"`
+}
+
+func (m *ViewManager) fields() ([]TableFieldInfo, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	fields := make([]TableFieldInfo, 0, len(m.collectors))
+	for table, collector := range m.collectors {
+		info := TableFieldInfo{
+			Table:  table,
+			Fields: collector.GetKeys(),
+		}
+		fields = append(fields, info)
+	}
+	return fields, nil
+}
+
 func (m *ViewManager) BuildRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/views", func(w http.ResponseWriter, r *http.Request) {
 		views, err := m.views()
@@ -95,5 +117,22 @@ func (m *ViewManager) BuildRoutes(mux *http.ServeMux) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(strings.Join(views, "\n\n\n")))
+	})
+
+	mux.HandleFunc("/fields", func(w http.ResponseWriter, r *http.Request) {
+		fields, err := m.fields()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		if err := json.NewEncoder(w).Encode(fields); err != nil {
+			logrus.Errorf("failed to encode fields response: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	})
 }
