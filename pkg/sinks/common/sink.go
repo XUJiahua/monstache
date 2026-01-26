@@ -32,7 +32,8 @@ type TransformConfig struct {
 }
 
 type MongoKeepFields struct {
-	Ns         string   `toml:"ns"`
+	Ns         string   `toml:"ns"`  // namespace
+	Nss        []string `toml:"nss"` // namespaces
 	IsDrop     bool     `toml:"drop"`
 	KeepFields []string `toml:"fields"`
 }
@@ -74,7 +75,14 @@ func New(transformConfig TransformConfig, bulkProcessor *bulk.BulkProcessor) (*S
 
 	keepers := make(map[string]*Transformer)
 	for _, mongoKeepFields := range transformConfig.MongoKeepFields {
-		keepers[mongoKeepFields.Ns] = NewTransformer(mongoKeepFields.Ns, mongoKeepFields.IsDrop, mongoKeepFields.KeepFields...)
+		// ns is deprecated, merge into nss for unified processing
+		nss := mongoKeepFields.Nss
+		if mongoKeepFields.Ns != "" {
+			nss = append(nss, mongoKeepFields.Ns)
+		}
+		for _, ns := range nss {
+			keepers[ns] = NewTransformer(ns, mongoKeepFields.IsDrop, mongoKeepFields.KeepFields...)
+		}
 	}
 
 	sink := &Sink{
