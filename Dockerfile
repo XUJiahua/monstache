@@ -6,10 +6,11 @@ RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go build -o monstache
 
 FROM debian:12 AS runtime
-RUN apt-get update
-RUN apt-get install ca-certificates -y
-RUN update-ca-certificates
-RUN apt-get install procps tmux vim clickhouse-client -y
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
+RUN apt-get update && \
+    apt-get install -y ca-certificates procps tmux vim && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy the products
