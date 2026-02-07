@@ -20,6 +20,7 @@ import (
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 type Config struct {
@@ -114,28 +115,33 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 		return err
 	}
 
+	g, gCtx := errgroup.WithContext(ctx)
 	for key, docs := range docsByTableDate {
-		ns := nsByTable[key.table]
-		database := c.config.Database
-		preprocess := c.NeedPreprocess(ns)
-		logrus.Debugf("starting to commit to %s.%s(%s), date: %s", database, key.table, ns, key.date)
-		if preprocess {
-			if err := c.BatchInsertWithPreprocess(ctx, database, key.table, docs); err != nil {
-				if c.config.DumpOnError {
-					Dump(ns, database, key.table, docs)
+		key, docs := key, docs
+		g.Go(func() error {
+			ns := nsByTable[key.table]
+			database := c.config.Database
+			preprocess := c.NeedPreprocess(ns)
+			logrus.Debugf("starting to commit to %s.%s(%s), date: %s", database, key.table, ns, key.date)
+			if preprocess {
+				if err := c.BatchInsertWithPreprocess(gCtx, database, key.table, docs); err != nil {
+					if c.config.DumpOnError {
+						Dump(ns, database, key.table, docs)
+					}
+					return err
 				}
-				return err
-			}
-		} else {
-			if err := c.BatchInsert(ctx, database, key.table, docs); err != nil {
-				if c.config.DumpOnError {
-					Dump(ns, database, key.table, docs)
+			} else {
+				if err := c.BatchInsert(gCtx, database, key.table, docs); err != nil {
+					if c.config.DumpOnError {
+						Dump(ns, database, key.table, docs)
+					}
+					return err
 				}
-				return err
 			}
-		}
+			return nil
+		})
 	}
-	return nil
+	return g.Wait()
 }
 
 func NewClient(config Config) (*Client, view.Manager) {

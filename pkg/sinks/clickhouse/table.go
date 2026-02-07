@@ -50,6 +50,10 @@ func (c *Client) EnsureTableExists(ctx context.Context, tables []string) error {
 	})
 	logrus.Debugf("after filtering out existing tables: %v", tableNames)
 
+	if len(tableNames) == 0 {
+		return nil
+	}
+
 	checkSQL := fmt.Sprintf(`
 		SELECT name 
 		FROM system.tables 

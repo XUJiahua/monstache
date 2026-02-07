@@ -4,15 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
+	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
 	"github.com/rwynn/monstache/v6/pkg/sinks/clickhouse/view"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -144,6 +151,86 @@ func TestAssignDefaultValues(t *testing.T) {
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
+}
+
+// mockBulkRequest implements bulk.BulkableRequest for unit testing.
+type mockBulkRequest struct {
+	namespace string
+	id        interface{}
+	doc       interface{}
+	date      string
+}
+
+func (r *mockBulkRequest) GetNamespace() string  { return r.namespace }
+func (r *mockBulkRequest) GetId() interface{}    { return r.id }
+func (r *mockBulkRequest) GetDoc() interface{}   { return r.doc }
+func (r *mockBulkRequest) GetDate() string       { return r.date }
+
+var tableFromQueryRE = regexp.MustCompile("`[^`]+`\\.`([^`]+)`")
+
+func TestCommit_ParallelInsert(t *testing.T) {
+	const perRequestDelay = 100 * time.Millisecond
+	const numTables = 5
+
+	var mu sync.Mutex
+	insertedTables := make(map[string]int)
+
+	// mock ClickHouse HTTP endpoint with deliberate delay
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		matches := tableFromQueryRE.FindStringSubmatch(query)
+		if len(matches) < 2 {
+			http.Error(w, "bad query", http.StatusBadRequest)
+			return
+		}
+		table := matches[1]
+
+		time.Sleep(perRequestDelay)
+
+		mu.Lock()
+		insertedTables[table]++
+		mu.Unlock()
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		httpClient: server.Client(),
+		config: Config{
+			Endpoint: server.URL,
+			Database: "testdb",
+		},
+		tablesCache: make(map[string]struct{}),
+		viewManager: &view.MockManager{},
+	}
+
+	// pre-populate cache so EnsureTableExists skips DB calls
+	var requests []bulk.BulkableRequest
+	for i := 0; i < numTables; i++ {
+		ns := fmt.Sprintf("db.table_%d", i)
+		table := view.ConvertToClickhouseTable(ns, "", "")
+		client.tablesCache[table] = struct{}{}
+		requests = append(requests, &mockBulkRequest{
+			namespace: ns,
+			id:        fmt.Sprintf("id_%d", i),
+			doc:       map[string]interface{}{"field": "value"},
+			date:      "2024-01-01",
+		})
+	}
+
+	start := time.Now()
+	err := client.Commit(context.Background(), requests)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	assert.Len(t, insertedTables, numTables)
+
+	// parallel: elapsed ~= 1 * delay; sequential would be >= numTables * delay
+	maxExpected := time.Duration(numTables) * perRequestDelay
+	assert.Less(t, elapsed, maxExpected,
+		"inserts should run in parallel, expected < %v but took %v", maxExpected, elapsed)
+	t.Logf("parallel commit of %d tables took %v (sequential would be >= %v)", numTables, elapsed, maxExpected)
 }
 
 func Test3(t *testing.T) {
