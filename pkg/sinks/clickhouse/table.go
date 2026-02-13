@@ -18,7 +18,7 @@ func init() {
 CREATE TABLE
     IF NOT EXISTS {{.Database}}.{{.Table}} (
         _id String,
-        __doc JSON,
+        __doc Object('json'),
         __date Date,
         __ver UInt64 DEFAULT 0, -- version, derived from oplog timestamp or _id timestamp
         __is_deleted UInt8 DEFAULT 0, -- 0:未删除 1:已删除 默认值为 0
