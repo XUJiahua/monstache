@@ -65,7 +65,7 @@ func (m *ViewManager) collect(table string, doc interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.collectors[table]; !ok {
-		m.collectors[table] = NewTableFieldCollector(table)
+		m.collectors[table] = NewTableFieldCollectorWithOptions(table, WithLeafArray(true))
 	}
 
 	m.collectors[table].CollectAny(doc)
@@ -89,8 +89,9 @@ func (m *ViewManager) views() ([]string, error) {
 
 // TableFieldInfo 表示表和字段信息的结构
 type TableFieldInfo struct {
-	Table  string   `json:"table"`
-	Fields []string `json:"fields"`
+	Table      string      `json:"table"`
+	Fields     []string    `json:"fields"`
+	FieldInfos []FieldInfo `json:"field_infos"`
 }
 
 func (m *ViewManager) fields() ([]TableFieldInfo, error) {
@@ -100,8 +101,9 @@ func (m *ViewManager) fields() ([]TableFieldInfo, error) {
 	fields := make([]TableFieldInfo, 0, len(m.collectors))
 	for table, collector := range m.collectors {
 		info := TableFieldInfo{
-			Table:  table,
-			Fields: collector.GetKeys(),
+			Table:      table,
+			Fields:     collector.GetKeys(),
+			FieldInfos: collector.GetFieldInfos(),
 		}
 		fields = append(fields, info)
 	}
