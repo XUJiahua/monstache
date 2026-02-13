@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,4 +44,30 @@ func TestClient_EnsureTableExists(t *testing.T) {
 
 	err = c.EnsureTableExists(context.TODO(), tables)
 	require.NoError(t, err)
+}
+
+func TestRenderCreateSQL_ObjectJSON(t *testing.T) {
+	sql, err := renderCreateSQL("mydb", "mytable", "Object('json')")
+	require.NoError(t, err)
+
+	assert.Contains(t, sql, "IF NOT EXISTS mydb.mytable")
+	assert.Contains(t, sql, "__doc Object('json')")
+	assert.Contains(t, sql, "_id String")
+	assert.Contains(t, sql, "ENGINE = ReplacingMergeTree")
+}
+
+func TestRenderCreateSQL_String(t *testing.T) {
+	sql, err := renderCreateSQL("mydb", "mytable", "String")
+	require.NoError(t, err)
+
+	assert.Contains(t, sql, "IF NOT EXISTS mydb.mytable")
+	assert.Contains(t, sql, "__doc String")
+	assert.NotContains(t, sql, "Object('json')")
+}
+
+func TestRenderCreateSQL_DifferentDatabaseAndTable(t *testing.T) {
+	sql, err := renderCreateSQL("prod_db", "user_events", "Object('json')")
+	require.NoError(t, err)
+
+	assert.Contains(t, sql, "IF NOT EXISTS prod_db.user_events")
 }

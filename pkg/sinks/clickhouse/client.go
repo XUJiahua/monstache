@@ -48,6 +48,8 @@ type Config struct {
 	PreprocessStringOnly bool `toml:"preprocess-string-only"`
 	// dump errors
 	DumpOnError bool `toml:"dump-on-error"`
+	// 使用 String 类型存储 __doc，而非 Object('json')
+	DocAsString bool `toml:"doc-as-string"`
 }
 
 // Auth
