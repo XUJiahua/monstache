@@ -87,7 +87,7 @@ func TestGetFieldInfos(t *testing.T) {
 
 	infos := collector.GetFieldInfos()
 	expected := []FieldInfo{
-		{Name: "active", GoType: "bool", ClickHouseType: "UInt8"},
+		{Name: "active", GoType: "bool", ClickHouseType: "Bool"},
 		{Name: "age", GoType: "int64", ClickHouseType: "Int64"},
 		{Name: "name", GoType: "string", ClickHouseType: "String"},
 	}
@@ -144,7 +144,7 @@ func TestGoTypeToClickHouseType(t *testing.T) {
 		{"int", "Int64"},
 		{"int32", "Int32"},
 		{"int64", "Int64"},
-		{"bool", "UInt8"},
+		{"bool", "Bool"},
 		{"unknown", "String"}, // fallback
 	}
 	for _, tt := range tests {

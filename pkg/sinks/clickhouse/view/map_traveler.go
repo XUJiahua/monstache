@@ -39,7 +39,7 @@ var goTypeToClickHouseType = map[string]string{
 	"int":     "Int64",
 	"int32":   "Int32",
 	"int64":   "Int64",
-	"bool":    "UInt8",
+	"bool":    "Bool",
 	// array types
 	"[]string":  "Array(String)",
 	"[]float64": "Array(Float64)",
@@ -47,7 +47,7 @@ var goTypeToClickHouseType = map[string]string{
 	"[]int":     "Array(Int64)",
 	"[]int32":   "Array(Int32)",
 	"[]int64":   "Array(Int64)",
-	"[]bool":    "Array(UInt8)",
+	"[]bool":    "Array(Bool)",
 }
 
 // inferGoType returns a normalized Go type name for any value.
