@@ -3370,6 +3370,9 @@ func (ic *indexClient) doIndexing(op *gtm.Op) (err error) {
 
 func (ic *indexClient) doIndex(op *gtm.Op) (err error) {
 	if err = ic.mapData(op); err == nil {
+		if ic.config.PruneInvalidJSON {
+			op.Data = fixPruneInvalidJSON(opIDToString(op), op.Data)
+		}
 		return ic.sinkConnector.RouteData(op)
 	}
 	return
