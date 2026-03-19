@@ -1,0 +1,30 @@
+# Oplog Recovery 配置
+# 用法: monstache -f config.recover.toml
+#
+# 从 oplog NDJSON 文件恢复数据到 ClickHouse，不走 GTM change stream。
+# 支持断点续传：进度文件自动保存在 oplog-recover-filepath 目录下的 .recover_progress.json
+# 中途 kill 后再次运行即可从断点继续。
+
+# MongoDB 连接（用于按 _id 回查完整文档）
+mongo-url = "mongodb://10.30.11.112:27017,10.30.11.112:27018,10.30.11.112:27019"
+
+Verbose = true
+
+# oplog 恢复文件路径
+# 可以是目录（自动按文件名排序处理所有 .ndjson / .ndjson.gz 文件）
+# 也可以是单个文件
+oplog-recover-filepath = "/Users/administrator/Downloads/oplog/split_output"
+
+[sink]
+[sink.clickhouse]
+enabled = true
+endpoint = "http://10.30.11.112:8123"
+endpoint-tcp = "10.30.11.112:9000"
+skip-unknown-fields = true
+date-time-best-effort = true
+database = "evocloud"
+table-prefix = "hk_"
+table-suffix = "_v1"
+[sink.clickhouse.auth]
+user = "default"
+password = ""

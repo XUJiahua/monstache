@@ -5566,7 +5566,6 @@ func main() {
 	}
 
 	if config.OplogRecoverFilepath != "" {
-		config.SinkConfig.ClickHouseConfig.Http = config.EnableOplog
 		afterBulk := func(executionID int64, requests []bulk.BulkableRequest, err error) {
 			if err != nil {
 				errorLog.Fatalf("Bulk commit failed during recovery: %v", err)
