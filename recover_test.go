@@ -563,3 +563,122 @@ func TestRecover_RealOplogDir(t *testing.T) {
 	t.Logf("OK: 30 ops routed, %d flushes, %d fetch calls",
 		sink.flushCount, len(fetcher.fetchCalls))
 }
+
+func TestRecover_NamespaceRegexFilter(t *testing.T) {
+	dir := t.TempDir()
+
+	id1 := generateObjectID(t)
+	id2 := generateObjectID(t)
+	id3 := generateObjectID(t)
+
+	ops := []recoverOp{
+		{Ts: "1000", Op: "u", Ns: "mydb.users", Id: id1.Hex()},
+		{Ts: "1001", Op: "u", Ns: "mydb.orders", Id: id2.Hex()},
+		{Ts: "1002", Op: "u", Ns: "other.logs", Id: id3.Hex()},
+	}
+	writeNDJSON(t, dir, "part_1.ndjson", ops)
+
+	allDocs := make(map[string]map[string]map[string]interface{})
+	for _, op := range ops {
+		oid, _ := primitive.ObjectIDFromHex(op.Id)
+		if allDocs[op.Ns] == nil {
+			allDocs[op.Ns] = make(map[string]map[string]interface{})
+		}
+		allDocs[op.Ns][op.Id] = map[string]interface{}{"_id": oid, "v": 1}
+	}
+	fetcher := &mockDocFetcher{docs: allDocs}
+	sink := &mockSinkConnector{}
+
+	// only include mydb.* namespaces
+	config := &ConfigOptions{
+		OplogRecoverFilepath: dir,
+		NsRegex:              "^mydb\\.",
+	}
+
+	doRecover(fetcher, config, sink, nil)
+
+	if len(sink.dataOps) != 2 {
+		t.Fatalf("expected 2 data ops (other.logs filtered), got %d", len(sink.dataOps))
+	}
+}
+
+func TestRecover_NamespaceExcludeRegexFilter(t *testing.T) {
+	dir := t.TempDir()
+
+	id1 := generateObjectID(t)
+	id2 := generateObjectID(t)
+	id3 := generateObjectID(t)
+
+	ops := []recoverOp{
+		{Ts: "1000", Op: "u", Ns: "mydb.users", Id: id1.Hex()},
+		{Ts: "1001", Op: "u", Ns: "mydb.orders", Id: id2.Hex()},
+		{Ts: "1002", Op: "d", Ns: "mydb.logs", Id: id3.Hex()},
+	}
+	writeNDJSON(t, dir, "part_1.ndjson", ops)
+
+	allDocs := make(map[string]map[string]map[string]interface{})
+	for _, op := range ops {
+		oid, _ := primitive.ObjectIDFromHex(op.Id)
+		if allDocs[op.Ns] == nil {
+			allDocs[op.Ns] = make(map[string]map[string]interface{})
+		}
+		allDocs[op.Ns][op.Id] = map[string]interface{}{"_id": oid, "v": 1}
+	}
+	fetcher := &mockDocFetcher{docs: allDocs}
+	sink := &mockSinkConnector{}
+
+	// exclude logs
+	config := &ConfigOptions{
+		OplogRecoverFilepath: dir,
+		NsExcludeRegex:       "\\.logs$",
+	}
+
+	doRecover(fetcher, config, sink, nil)
+
+	if len(sink.dataOps) != 2 {
+		t.Fatalf("expected 2 data ops (logs excluded), got %d", len(sink.dataOps))
+	}
+	if len(sink.deleteOps) != 0 {
+		t.Fatalf("expected 0 delete ops (logs excluded), got %d", len(sink.deleteOps))
+	}
+}
+
+func TestRecover_NamespaceRegexAndExcludeCombined(t *testing.T) {
+	dir := t.TempDir()
+
+	id1 := generateObjectID(t)
+	id2 := generateObjectID(t)
+	id3 := generateObjectID(t)
+
+	ops := []recoverOp{
+		{Ts: "1000", Op: "u", Ns: "mydb.users", Id: id1.Hex()},
+		{Ts: "1001", Op: "u", Ns: "mydb.logs", Id: id2.Hex()},
+		{Ts: "1002", Op: "u", Ns: "other.users", Id: id3.Hex()},
+	}
+	writeNDJSON(t, dir, "part_1.ndjson", ops)
+
+	allDocs := make(map[string]map[string]map[string]interface{})
+	for _, op := range ops {
+		oid, _ := primitive.ObjectIDFromHex(op.Id)
+		if allDocs[op.Ns] == nil {
+			allDocs[op.Ns] = make(map[string]map[string]interface{})
+		}
+		allDocs[op.Ns][op.Id] = map[string]interface{}{"_id": oid, "v": 1}
+	}
+	fetcher := &mockDocFetcher{docs: allDocs}
+	sink := &mockSinkConnector{}
+
+	// include mydb.*, but exclude logs
+	config := &ConfigOptions{
+		OplogRecoverFilepath: dir,
+		NsRegex:              "^mydb\\.",
+		NsExcludeRegex:       "\\.logs$",
+	}
+
+	doRecover(fetcher, config, sink, nil)
+
+	// only mydb.users passes both filters
+	if len(sink.dataOps) != 1 {
+		t.Fatalf("expected 1 data op (only mydb.users), got %d", len(sink.dataOps))
+	}
+}

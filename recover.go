@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"context"
+	"regexp"
 
 	"github.com/rwynn/gtm/v2"
 	"github.com/rwynn/monstache/v6/pkg/sinks"
@@ -87,6 +88,28 @@ func (f *mongoDocFetcher) FetchByIDs(ctx context.Context, namespace string, oids
 	return result, nil
 }
 
+// buildRecoverNsFilter builds a namespace filter from config, reusing the same
+// regex options as the normal sync flow (namespace-regex, namespace-exclude-regex).
+func buildRecoverNsFilter(config *ConfigOptions) func(ns string) bool {
+	var include *regexp.Regexp
+	var exclude *regexp.Regexp
+	if config.NsRegex != "" {
+		include = regexp.MustCompile(config.NsRegex)
+	}
+	if config.NsExcludeRegex != "" {
+		exclude = regexp.MustCompile(config.NsExcludeRegex)
+	}
+	return func(ns string) bool {
+		if include != nil && !include.MatchString(ns) {
+			return false
+		}
+		if exclude != nil && exclude.MatchString(ns) {
+			return false
+		}
+		return true
+	}
+}
+
 func Recover(client *mongo.Client, config *ConfigOptions, sinkConnector sinks.SinkConnector, closers []sinks.Closer) {
 	fetcher := &mongoDocFetcher{client: client}
 	doRecover(fetcher, config, sinkConnector, closers)
@@ -138,8 +161,11 @@ func doRecover(fetcher DocFetcher, config *ConfigOptions, sinkConnector sinks.Si
 		completedSet[f] = true
 	}
 
+	nsFilter := buildRecoverNsFilter(config)
+
 	var totalProcessed int64
 	var totalSkipped int64
+	var totalFiltered int64
 
 	for _, filePath := range files {
 		baseName := filepath.Base(filePath)
@@ -154,12 +180,13 @@ func doRecover(fetcher DocFetcher, config *ConfigOptions, sinkConnector sinks.Si
 			infoLog.Printf("resuming file %s from line %d", baseName, startLine)
 		}
 
-		processed, skipped, err := recoverFile(fetcher, sinkConnector, filePath, baseName, startLine, progress, progressPath)
+		processed, skipped, filtered, err := recoverFile(fetcher, sinkConnector, nsFilter, filePath, baseName, startLine, progress, progressPath)
 		if err != nil {
 			errorLog.Fatalf("failed to recover file %s: %v", baseName, err)
 		}
 		totalProcessed += processed
 		totalSkipped += skipped
+		totalFiltered += filtered
 
 		// mark file completed
 		progress.Completed = append(progress.Completed, baseName)
@@ -167,10 +194,10 @@ func doRecover(fetcher DocFetcher, config *ConfigOptions, sinkConnector sinks.Si
 		progress.Line = 0
 		saveProgress(progressPath, progress)
 
-		infoLog.Printf("completed file %s: processed=%d skipped=%d", baseName, processed, skipped)
+		infoLog.Printf("completed file %s: processed=%d skipped=%d filtered=%d", baseName, processed, skipped, filtered)
 	}
 
-	infoLog.Printf("recovery complete: total_processed=%d total_skipped=%d", totalProcessed, totalSkipped)
+	infoLog.Printf("recovery complete: total_processed=%d total_skipped=%d total_filtered=%d", totalProcessed, totalSkipped, totalFiltered)
 
 	// optionally remove progress file
 	os.Remove(progressPath)
@@ -179,14 +206,15 @@ func doRecover(fetcher DocFetcher, config *ConfigOptions, sinkConnector sinks.Si
 func recoverFile(
 	fetcher DocFetcher,
 	sinkConnector sinks.SinkConnector,
+	nsFilter func(string) bool,
 	filePath, baseName string,
 	startLine int64,
 	progress *recoverProgress,
 	progressPath string,
-) (processed, skipped int64, err error) {
+) (processed, skipped, filtered int64, err error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return 0, 0, fmt.Errorf("open file: %w", err)
+		return 0, 0, 0, fmt.Errorf("open file: %w", err)
 	}
 	defer f.Close()
 
@@ -194,7 +222,7 @@ func recoverFile(
 	if strings.HasSuffix(filePath, ".gz") {
 		gr, err := gzip.NewReader(f)
 		if err != nil {
-			return 0, 0, fmt.Errorf("gzip reader: %w", err)
+			return 0, 0, 0, fmt.Errorf("gzip reader: %w", err)
 		}
 		defer gr.Close()
 		reader = gr
@@ -223,6 +251,11 @@ func recoverFile(
 			continue
 		}
 
+		if !nsFilter(op.Ns) {
+			filtered++
+			continue
+		}
+
 		ts, err := strconv.ParseUint(op.Ts, 10, 64)
 		if err != nil {
 			errorLog.Printf("skipping invalid ts at line %d in %s: %v", lineNum, baseName, err)
@@ -243,7 +276,7 @@ func recoverFile(
 		if batchCount >= recoverBatchSize {
 			p, s, err := flushBatch(fetcher, sinkConnector, batch)
 			if err != nil {
-				return processed, skipped, fmt.Errorf("flush batch at line %d: %w", lineNum, err)
+				return processed, skipped, filtered, fmt.Errorf("flush batch at line %d: %w", lineNum, err)
 			}
 			processed += p
 			skipped += s
@@ -257,19 +290,19 @@ func recoverFile(
 		}
 
 		if lineNum%recoverProgressLogInterval == 0 {
-			infoLog.Printf("file=%s line=%d processed=%d skipped=%d", baseName, lineNum, processed, skipped)
+			infoLog.Printf("file=%s line=%d processed=%d skipped=%d filtered=%d", baseName, lineNum, processed, skipped, filtered)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return processed, skipped, fmt.Errorf("scanner error: %w", err)
+		return processed, skipped, filtered, fmt.Errorf("scanner error: %w", err)
 	}
 
 	// flush remaining
 	if batchCount > 0 {
 		p, s, err := flushBatch(fetcher, sinkConnector, batch)
 		if err != nil {
-			return processed, skipped, fmt.Errorf("flush remaining batch: %w", err)
+			return processed, skipped, filtered, fmt.Errorf("flush remaining batch: %w", err)
 		}
 		processed += p
 		skipped += s
@@ -279,7 +312,7 @@ func recoverFile(
 		saveProgress(progressPath, progress)
 	}
 
-	return processed, skipped, nil
+	return processed, skipped, filtered, nil
 }
 
 func flushBatch(
