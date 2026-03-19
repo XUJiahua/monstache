@@ -5565,6 +5565,21 @@ func main() {
 		return
 	}
 
+	if config.OplogRecoverFilepath != "" {
+		config.SinkConfig.ClickHouseConfig.Http = config.EnableOplog
+		afterBulk := func(executionID int64, requests []bulk.BulkableRequest, err error) {
+			if err != nil {
+				errorLog.Fatalf("Bulk commit failed during recovery: %v", err)
+			}
+		}
+		sinkConnector, _, closers, err := sinks.CreateSink(config.SinkConfig, afterBulk)
+		if err != nil {
+			errorLog.Fatalf("failed to create sink connector: %v", err)
+		}
+		Recover(mongoClient, config, sinkConnector, closers)
+		return
+	}
+
 	ic := &indexClient{
 		config:         config,
 		mongo:          mongoClient,
