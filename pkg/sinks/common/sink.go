@@ -28,6 +28,9 @@ type TransformConfig struct {
 	// embed original data, unmodified
 	EmbedDoc bool `toml:"-"`
 
+	// 不删除 N 天前的记录。文档创建时间距删除事件超过该天数时，忽略删除操作。0 表示不限制。
+	NoDeleteBeforeDays int `toml:"no-delete-before-days"`
+
 	MongoKeepFields []MongoKeepFields `toml:"mongo-keep-fields"`
 }
 
@@ -159,6 +162,16 @@ func (s *Sink) RouteData(op *gtm.Op) (err error) {
 }
 
 func (s *Sink) RouteDelete(op *gtm.Op) (err error) {
+	if s.transform.NoDeleteBeforeDays > 0 {
+		if objectID, ok := op.Id.(primitive.ObjectID); ok {
+			docAge := time.Since(objectID.Timestamp())
+			threshold := time.Duration(s.transform.NoDeleteBeforeDays) * 24 * time.Hour
+			if docAge > threshold {
+				logrus.Debugf("ignore delete for old document %v (age: %v, threshold: %v)", op.Id, docAge, threshold)
+				return nil
+			}
+		}
+	}
 	return s.process(op, true)
 }
 
