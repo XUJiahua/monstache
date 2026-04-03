@@ -205,7 +205,12 @@ func (c *Client) NeedPreprocess(ns string) bool {
 }
 
 // preprocessBatch 需要保证同一个批次下的数据结构一致
-func preprocessBatch(rows []interface{}, logger *logrus.Entry, stringOnly bool) ([]map[string]interface{}, error) {
+func preprocessBatch(rows []interface{}, logger *logrus.Entry, stringOnly bool, useNumber ...bool) ([]map[string]interface{}, error) {
+	enableUseNumber := true
+	if len(useNumber) > 0 {
+		enableUseNumber = useNumber[0]
+	}
+
 	var newRows []map[string]interface{}
 
 	// collect fields
@@ -216,7 +221,16 @@ func preprocessBatch(rows []interface{}, logger *logrus.Entry, stringOnly bool) 
 			return nil, err
 		}
 		var doc map[string]interface{}
-		err = json.Unmarshal(data, &doc)
+		if enableUseNumber {
+			// Use json.Decoder with UseNumber() to preserve int64 precision.
+			// json.Unmarshal decodes all numbers as float64, which loses precision
+			// for large integers like __ver (e.g., 7604288878022754304 → 7604288878022754000).
+			dec := json.NewDecoder(bytes.NewReader(data))
+			dec.UseNumber()
+			err = dec.Decode(&doc)
+		} else {
+			err = json.Unmarshal(data, &doc)
+		}
 		if err != nil {
 			return nil, err
 		}
