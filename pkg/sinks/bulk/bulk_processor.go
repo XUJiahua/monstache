@@ -4,12 +4,13 @@ package bulk
 
 import (
 	"context"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/rwynn/monstache/v6/pkg/metrics"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/rwynn/monstache/v6/pkg/metrics"
+	"github.com/sirupsen/logrus"
 )
 
 // BulkableRequest it's sinker's own to convert to their format
@@ -451,6 +452,7 @@ func (s *BulkService) Do(ctx context.Context) error {
 	if err := s.client.Commit(ctx, s.requests); err != nil {
 		return err
 	}
+	metrics.TotalProcessed.Add(int64(num))
 
 	// commit successful, reset the request queue
 	s.Reset()

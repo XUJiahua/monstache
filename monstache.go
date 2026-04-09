@@ -5203,6 +5203,10 @@ func (ic *indexClient) eventLoop() {
 		printStats.Stop()
 	}
 	infoLog.Println("Listening for events")
+	progressTicker := time.NewTicker(30 * time.Second)
+	defer progressTicker.Stop()
+	var prevReceived, prevProcessed int64
+	prevTime := time.Now()
 	ic.sigH.clientStartedC <- ic
 	for {
 		select {
@@ -5235,6 +5239,33 @@ func (ic *indexClient) eventLoop() {
 				break
 			}
 			ic.nextStats()
+		case <-progressTicker.C:
+			if !ic.enabled {
+				break
+			}
+			now := time.Now()
+			elapsed := now.Sub(prevTime).Seconds()
+			curReceived := metrics.TotalReceived.Load()
+			curProcessed := metrics.TotalProcessed.Load()
+			deltaRecv := curReceived - prevReceived
+			deltaProc := curProcessed - prevProcessed
+			var rateRecv, rateProc float64
+			if elapsed > 0 {
+				rateRecv = float64(deltaRecv) / elapsed
+				rateProc = float64(deltaProc) / elapsed
+			}
+			lag := curReceived - curProcessed
+			var opTimeStr string
+			if ic.lastTs.T > 0 {
+				opTimeStr = time.Unix(int64(ic.lastTs.T), 0).UTC().Format(time.RFC3339)
+			} else {
+				opTimeStr = "N/A"
+			}
+			infoLog.Printf("[progress] received=%d processed=%d pending=%d recv_rate=%.0f/s proc_rate=%.0f/s optime=%s",
+				curReceived, curProcessed, lag, rateRecv, rateProc, opTimeStr)
+			prevReceived = curReceived
+			prevProcessed = curProcessed
+			prevTime = now
 		case req := <-ic.statusReqC:
 			enabled, lastTs := ic.enabled, ic.lastTs
 			statusResp := &statusResponse{
@@ -5260,6 +5291,7 @@ func (ic *indexClient) eventLoop() {
 			}
 
 			metrics.OpsReceived.WithLabelValues(op.Namespace, op.Operation).Inc()
+			metrics.TotalReceived.Add(1)
 
 			if op.IsSourceOplog() {
 				ic.lastTs = op.Timestamp
