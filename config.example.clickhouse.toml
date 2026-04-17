@@ -1,0 +1,213 @@
+# ============================================================================
+# MongoDB → ClickHouse 同步示例配置
+# 通过追踪 MongoDB oplog，将变更数据实时同步到 ClickHouse
+# ============================================================================
+
+# --------------------------------------------------------------------------
+# MongoDB 连接配置
+# --------------------------------------------------------------------------
+
+# MongoDB 连接地址，支持副本集多节点
+# 格式: mongodb://host1:port1,host2:port2,host3:port3
+mongo-url = "mongodb://10.0.0.1:27017,10.0.0.2:27017,10.0.0.3:27017"
+
+# --------------------------------------------------------------------------
+# Namespace 过滤（决定同步哪些库/集合）
+# --------------------------------------------------------------------------
+
+# 正则匹配需要同步的 namespace（格式: database.collection）
+# 示例: "mydb\\..*" 表示同步 mydb 下所有集合
+namespace-regex = "mydb\\..*"
+
+# 排除不需要同步的 namespace（优先级高于 namespace-regex）
+namespace-exclude-regex = ""
+
+# 匹配需要监听 drop 事件的 namespace
+namespace-drop-regex = ""
+
+# 排除不需要监听 drop 事件的 namespace
+namespace-drop-exclude-regex = ""
+
+# --------------------------------------------------------------------------
+# Oplog 追踪配置
+# --------------------------------------------------------------------------
+
+# 启用 oplog 追踪模式（核心开关，必须为 true 才能实时同步）
+enable-oplog = true
+
+# 禁用 change stream，使用传统 oplog tailing（适用于不支持 change stream 的场景）
+disable-change-events = false
+
+# 禁用删除保护。为 false 时，删除操作会先查询文档再标记删除
+disable-delete-protection = false
+
+# --------------------------------------------------------------------------
+# 断点续传配置（保证重启后不丢数据）
+# --------------------------------------------------------------------------
+
+# 启用断点续传，将同步进度持久化到 MongoDB
+resume = true
+
+# 断点记录的名称（用于区分多个 monstache 实例）
+resume-name = "clickhouse-sync-checkpoint"
+
+# 断点策略: 0 = 基于 oplog timestamp
+resume-strategy = 0
+
+# 是否使用非安全写入保存断点（true 可提升性能，但有极小概率丢失断点）
+resume-write-unsafe = false
+
+# 从指定的 oplog timestamp 开始同步（0 表示从当前位置开始）
+# 格式为 MongoDB Timestamp 的整数表示
+resume-from-timestamp = 0
+
+# 从最早可用的 oplog 记录开始同步（首次启动时有用）
+resume-from-earliest-timestamp = false
+
+# --------------------------------------------------------------------------
+# 运行模式
+# --------------------------------------------------------------------------
+
+# 是否启用 verbose 日志（调试时建议开启）
+Verbose = true
+
+# 是否启用 debug 日志（比 verbose 更详细）
+Debug = false
+
+# 快速失败模式，遇到错误立即退出（生产环境建议 false）
+fail-fast = false
+
+# 是否启用 HTTP 服务（可用于健康检查和监控）
+enable-http-server = true
+
+# HTTP 服务监听地址（空字符串使用默认端口）
+http-server-addr = ""
+
+# --------------------------------------------------------------------------
+# ClickHouse Sink 配置
+# --------------------------------------------------------------------------
+
+[sink]
+
+  [sink.clickhouse]
+    # 启用 ClickHouse sink
+    enabled = true
+
+    # ClickHouse HTTP 接口地址（用于数据写入）
+    endpoint = "http://10.0.0.10:8123"
+
+    # ClickHouse TCP 接口地址（用于 DDL 操作，如自动建表）
+    endpoint-tcp = "10.0.0.10:9000"
+
+    # 跳过表结构中不存在的字段（避免因字段不匹配导致写入失败）
+    skip-unknown-fields = true
+
+    # 启用日期时间最佳解析（支持 RFC3339/ISO 8601 等多种时间格式）
+    date-time-best-effort = true
+
+    # ClickHouse 目标数据库名
+    database = "mydb"
+
+    # 表名前缀（最终表名 = 前缀 + collection名 + 后缀）
+    table-prefix = ""
+
+    # 表名后缀
+    table-suffix = ""
+
+    # 启用 HTTP 模式，提供表结构视图接口
+    http = false
+
+    # 需要预处理的 namespace 正则（预处理会统一同批次数据结构，适用于 schema 不固定的集合）
+    preprocess-namespace-regex = ""
+
+    # 预处理时仅处理字符串字段（将 nil 转为 ""）
+    preprocess-string-only = false
+
+    # 写入失败时将数据 dump 到本地文件（便于排查问题）
+    dump-on-error = true
+
+    # 使用 String 类型存储 __doc 字段，而非 Object('json')
+    # 当文档结构极度不规则时建议开启，避免 ClickHouse Object 类型的限制
+    doc-as-string = false
+
+    # Namespace database 重映射
+    # 键为 MongoDB 中的 database 名，值为映射后用于生成 ClickHouse 表名的 database 名
+    # 示例: 将 MongoDB 中 newdb.users 的数据写入 ClickHouse 表 olddb_users
+    # [sink.clickhouse.namespace-database-map]
+    #   newdb = "olddb"
+
+    # ClickHouse 认证信息
+    [sink.clickhouse.auth]
+      user = "default"
+      password = ""
+
+  # --------------------------------------------------------------------------
+  # 其他 Sink（按需启用，同一时间可启用多个）
+  # --------------------------------------------------------------------------
+
+  [sink.kafka]
+    enabled = false
+
+  [sink.file]
+    enabled = false
+
+  [sink.console]
+    # 启用控制台输出（调试时可开启，生产环境关闭）
+    enabled = false
+
+  # --------------------------------------------------------------------------
+  # 数据转换配置（控制写入 ClickHouse 的系统字段名）
+  # --------------------------------------------------------------------------
+
+  [sink.transform]
+    # 版本号字段名（ReplacingMergeTree 用于去重的版本列）
+    system-field-version = "__ver"
+
+    # 虚拟删除标记字段名（0=未删除, 1=已删除）
+    system-field-virtual-delete = "__is_deleted"
+
+    # 日期分区字段名（用于 ClickHouse 按日期分区）
+    system-field-date = "__date"
+
+    # 来源 namespace 字段名（记录数据来自哪个 MongoDB 集合）
+    system-field-namespace = "__ns"
+
+    # oplog 时间戳字段名（用于追踪 oplog 进度）
+    system-field-op-time = "__op_time"
+
+    # 同步时间字段名（记录数据写入 ClickHouse 的时间）
+    system-field-sync-time = "__sync_time"
+
+    # 嵌入原始文档的字段名
+    system-field-embed-doc = "__doc"
+
+    # 不删除 N 天前的记录。当文档创建时间距删除事件超过该天数时，忽略删除操作
+    # 0 表示不限制（所有删除都会同步）
+    no-delete-before-days = 0
+
+    # 字段保留/丢弃规则（可针对不同集合配置）
+    # 示例: 只保留 mydb.users 集合的 name 和 email 字段
+    # [[sink.transform.mongo-keep-fields]]
+    #   nss = ["mydb.users"]
+    #   drop = false
+    #   fields = ["name", "email", "profile.avatar"]
+
+    # 示例: 丢弃 mydb.logs 集合的 raw_body 字段
+    # [[sink.transform.mongo-keep-fields]]
+    #   nss = ["mydb.logs"]
+    #   drop = true
+    #   fields = ["raw_body"]
+
+  # --------------------------------------------------------------------------
+  # 批量写入配置（控制写入 ClickHouse 的批次行为）
+  # --------------------------------------------------------------------------
+
+  [sink.bulk]
+    # 并发写入的 worker 数量
+    workers = 1
+
+    # 每批次最大文档数（达到后立即刷写）
+    batch-size = 1000
+
+    # 刷写间隔（秒），即使未达到 batch-size 也会定时刷写
+    flush-interval-seconds = 5
