@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/rwynn/monstache/v6/pkg/sinks/bulk"
@@ -153,6 +154,37 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
+func TestConfig_NamespaceDatabaseMap_TOMLParsing(t *testing.T) {
+	tomlStr := `
+[sink.clickhouse]
+  enabled = true
+  endpoint = "http://localhost:8123"
+  database = "test"
+  [sink.clickhouse.namespace-database-map]
+    "newdb" = "olddb"
+    "new-settle" = "settle"
+`
+
+	type sinkWrapper struct {
+		Clickhouse Config `toml:"clickhouse"`
+	}
+	type configWrapper struct {
+		Sink sinkWrapper `toml:"sink"`
+	}
+
+	var cfg configWrapper
+	_, err := toml.Decode(tomlStr, &cfg)
+	require.NoError(t, err)
+
+	assert.True(t, cfg.Sink.Clickhouse.Enabled)
+	assert.Equal(t, "http://localhost:8123", cfg.Sink.Clickhouse.Endpoint)
+	assert.Equal(t, "test", cfg.Sink.Clickhouse.Database)
+
+	require.Len(t, cfg.Sink.Clickhouse.NamespaceDatabaseMap, 2)
+	assert.Equal(t, "olddb", cfg.Sink.Clickhouse.NamespaceDatabaseMap["newdb"])
+	assert.Equal(t, "settle", cfg.Sink.Clickhouse.NamespaceDatabaseMap["new-settle"])
+}
+
 // mockBulkRequest implements bulk.BulkableRequest for unit testing.
 type mockBulkRequest struct {
 	namespace string
@@ -161,10 +193,10 @@ type mockBulkRequest struct {
 	date      string
 }
 
-func (r *mockBulkRequest) GetNamespace() string  { return r.namespace }
-func (r *mockBulkRequest) GetId() interface{}    { return r.id }
-func (r *mockBulkRequest) GetDoc() interface{}   { return r.doc }
-func (r *mockBulkRequest) GetDate() string       { return r.date }
+func (r *mockBulkRequest) GetNamespace() string { return r.namespace }
+func (r *mockBulkRequest) GetId() interface{}   { return r.id }
+func (r *mockBulkRequest) GetDoc() interface{}  { return r.doc }
+func (r *mockBulkRequest) GetDate() string      { return r.date }
 
 var tableFromQueryRE = regexp.MustCompile("`[^`]+`\\.`([^`]+)`")
 
@@ -203,6 +235,7 @@ func TestCommit_ParallelInsert(t *testing.T) {
 		},
 		tablesCache: make(map[string]struct{}),
 		viewManager: &view.MockManager{},
+		remapper:    NewNsDatabaseRemapper(nil),
 	}
 
 	// pre-populate cache so EnsureTableExists skips DB calls

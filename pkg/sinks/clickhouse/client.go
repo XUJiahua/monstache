@@ -50,6 +50,10 @@ type Config struct {
 	DumpOnError bool `toml:"dump-on-error"`
 	// 使用 String 类型存储 __doc，而非 Object('json')
 	DocAsString bool `toml:"doc-as-string"`
+	// NamespaceDatabaseMap 定义 namespace database 部分的重映射关系
+	// 键为新 database 名称，值为旧 database 名称
+	// 示例: {"newdb" = "olddb"} 表示将 newdb.xxx 重映射为 olddb.xxx
+	NamespaceDatabaseMap map[string]string `toml:"namespace-database-map"`
 }
 
 // Auth
@@ -72,6 +76,7 @@ type Client struct {
 	viewManager view.Manager
 
 	preprocessNsRE *regexp.Regexp
+	remapper       *NsDatabaseRemapper
 }
 
 func (c *Client) EmbedDoc() bool {
@@ -82,6 +87,11 @@ func (c *Client) Name() string {
 	return "clickhouse"
 }
 
+// Commit inserts requests into ClickHouse, grouping by table and date.
+// Note on MongoKeepFields compatibility: MongoKeepFields matching happens in
+// Common Sink.process using op.Namespace (the original, un-remapped namespace).
+// The namespace remapping here only affects table name generation and view routing,
+// so MongoKeepFields is completely unaffected by the remapping logic.
 func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) error {
 	// group docs by table and date
 	type tableDate struct {
@@ -93,9 +103,11 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 
 	for _, request := range requests {
 		ns := request.GetNamespace()
-		table := view.ConvertToClickhouseTable(ns, c.config.TablePrefix, c.config.TableSuffix)
+		remappedNs := c.remapper.Remap(ns)
+		table := view.ConvertToClickhouseTable(remappedNs, c.config.TablePrefix, c.config.TableSuffix)
 		date := request.GetDate()
 		key := tableDate{table: table, date: date}
+		// preserve original namespace for logging and preprocess checks
 		nsByTable[table] = ns
 
 		if docs, ok := docsByTableDate[key]; ok {
@@ -104,7 +116,7 @@ func (c *Client) Commit(ctx context.Context, requests []bulk.BulkableRequest) er
 			docsByTableDate[key] = []interface{}{request.GetDoc()}
 		}
 
-		// collect view fields
+		// collect view fields using remapped table name
 		c.viewManager.Collect(fmt.Sprintf("%s.%s", c.config.Database, table), request.GetDoc())
 	}
 
@@ -185,6 +197,13 @@ func NewClient(config Config) (*Client, view.Manager) {
 	}
 	viewManager.Start()
 
+	remapper := NewNsDatabaseRemapper(config.NamespaceDatabaseMap)
+	if len(config.NamespaceDatabaseMap) > 0 {
+		for newDb, oldDb := range config.NamespaceDatabaseMap {
+			logrus.Infof("namespace database remapping: %s → %s", newDb, oldDb)
+		}
+	}
+
 	return &Client{
 		// fixme: a better settings
 		httpClient:     http.DefaultClient,
@@ -193,6 +212,7 @@ func NewClient(config Config) (*Client, view.Manager) {
 		tablesCache:    make(map[string]struct{}),
 		viewManager:    viewManager,
 		preprocessNsRE: preprocessNsRE,
+		remapper:       remapper,
 	}, viewManager
 }
 
